@@ -1,0 +1,8 @@
+[package]
+name = "beagle"
+version = "0.1.0"
+authors = ["Popog"]
+build = "build.rs"
+repository = "https://github.com/Popog/beagle-rs"
+readme = "README.md"
+license = "MIT"
