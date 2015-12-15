@@ -18,7 +18,7 @@ pub trait Dim<T:Copy>: Copy {
     U::IntoIter: ExactSizeIterator;
 }
 
-pub trait Object {
+pub trait ScalarArray {
     type Scalar: Scalar;
     type Type: Copy;
     type Dim: Dim<Self::Type>;
@@ -34,23 +34,23 @@ pub trait Object {
     fn from_value(v: Self::Scalar) -> Self;
 }
 
-pub trait Cast<T: Scalar>: Object
-where <Self as Object>::Dim: Dim<<Self::Output as Object>::Type> {
-    type Output: Object<Scalar=T, Dim=<Self as Object>::Dim>;
+pub trait Cast<T: Scalar>: ScalarArray
+where <Self as ScalarArray>::Dim: Dim<<Self::Output as ScalarArray>::Type> {
+    type Output: ScalarArray<Scalar=T, Dim=<Self as ScalarArray>::Dim>;
 
     #[inline(always)]
-    fn fold<F: Fn(T, &<Self as Object>::Scalar)->T>(&self, default: T, f: F) -> T;
+    fn fold<F: Fn(T, &<Self as ScalarArray>::Scalar)->T>(&self, default: T, f: F) -> T;
 
     #[inline(always)]
-    fn unary<F: Fn(&<Self as Object>::Scalar)->T>(&self, f: F) -> Self::Output;
+    fn unary<F: Fn(&<Self as ScalarArray>::Scalar)->T>(&self, f: F) -> Self::Output;
 
     #[inline(always)]
-    fn binary<F: Fn(&<Self as Object>::Scalar, &<Self as Object>::Scalar)->T>(&self, rhs: &Self, f: F) -> Self::Output;
+    fn binary<F: Fn(&<Self as ScalarArray>::Scalar, &<Self as ScalarArray>::Scalar)->T>(&self, rhs: &Self, f: F) -> Self::Output;
 }
 
-pub trait ComponentPartialEq: Object + Cast<bool>
-where <Self as Object>::Scalar: PartialEq,
-<Self as Object>::Dim: Dim<<<Self as Cast<bool>>::Output as Object>::Type> {
+pub trait ComponentPartialEq: ScalarArray + Cast<bool>
+where <Self as ScalarArray>::Scalar: PartialEq,
+<Self as ScalarArray>::Dim: Dim<<<Self as Cast<bool>>::Output as ScalarArray>::Type> {
     fn cpt_eq(&self, rhs: &Self) -> <Self as Cast<bool>>::Output {
         Cast::<bool>::binary(self, rhs, PartialEq::eq)
     }
@@ -61,13 +61,13 @@ where <Self as Object>::Scalar: PartialEq,
 }
 
 pub trait ComponentEq : ComponentPartialEq
-where <Self as Object>::Scalar: Eq,
-<Self as Object>::Dim: Dim<<<Self as Cast<bool>>::Output as Object>::Type> {}
+where <Self as ScalarArray>::Scalar: Eq,
+<Self as ScalarArray>::Dim: Dim<<<Self as Cast<bool>>::Output as ScalarArray>::Type> {}
 
 
 pub trait ComponentPartialOrd: ComponentPartialEq + Cast<Option<Ordering>>
-where <Self as Object>::Scalar: PartialOrd,
-<Self as Object>::Dim: Dim<<<Self as Cast<bool>>::Output as Object>::Type> + Dim<<<Self as Cast<Option<Ordering>>>::Output as Object>::Type> {
+where <Self as ScalarArray>::Scalar: PartialOrd,
+<Self as ScalarArray>::Dim: Dim<<<Self as Cast<bool>>::Output as ScalarArray>::Type> + Dim<<<Self as Cast<Option<Ordering>>>::Output as ScalarArray>::Type> {
     fn cpt_partial_cmp(&self, rhs: &Self) -> <Self as Cast<Option<Ordering>>>::Output {
         Cast::<Option<Ordering>>::binary(self, rhs, PartialOrd::partial_cmp)
     }
@@ -87,8 +87,8 @@ where <Self as Object>::Scalar: PartialOrd,
 }
 
 pub trait ComponentOrd: ComponentEq + ComponentPartialOrd + Cast<Ordering>
-where <Self as Object>::Scalar: Ord,
-<Self as Object>::Dim: Dim<<<Self as Cast<bool>>::Output as Object>::Type> + Dim<<<Self as Cast<Option<Ordering>>>::Output as Object>::Type> + Dim<<<Self as Cast<Ordering>>::Output as Object>::Type> {
+where <Self as ScalarArray>::Scalar: Ord,
+<Self as ScalarArray>::Dim: Dim<<<Self as Cast<bool>>::Output as ScalarArray>::Type> + Dim<<<Self as Cast<Option<Ordering>>>::Output as ScalarArray>::Type> + Dim<<<Self as Cast<Ordering>>::Output as ScalarArray>::Type> {
     fn cpt_cmp(&self, rhs: &Self) -> <Self as Cast<Ordering>>::Output {
         Cast::<Ordering>::binary(self, rhs, Ord::cmp)
     }

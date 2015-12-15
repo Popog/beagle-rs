@@ -3,13 +3,13 @@ use std::cmp::Ordering;
 use std::ops::{Index,IndexMut};
 use std::slice::{Iter,IterMut};
 
-use traits::{Scalar,Dim, Object,Cast, ComponentPartialEq,ComponentEq,ComponentPartialOrd,ComponentOrd};
+use traits::{Scalar,Dim, ScalarArray,Cast, ComponentPartialEq,ComponentEq,ComponentPartialOrd,ComponentOrd};
 use vec::Vec;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Mat<R, C, T: Scalar> (R::Output) where C: Dim<T>, R: Dim<Vec<C, T>>;
 
-impl <T: Scalar, C: Dim<T>, R: Dim<Vec<C, T>>> Object for Mat<R, C, T> {
+impl <T: Scalar, C: Dim<T>, R: Dim<Vec<C, T>>> ScalarArray for Mat<R, C, T> {
     type Scalar = T;
     type Type = Vec<C, T>;
     type Dim = R;
@@ -35,17 +35,17 @@ impl <T: Scalar,  U: Scalar, C: Dim<T>+Dim<U>, R: Dim<Vec<C, T>>+Dim<Vec<C, U>>>
     type Output = Mat<R, C, U>;
 
     #[inline(always)]
-    fn fold<F: Fn(U, &<Self as Object>::Scalar)->U>(&self, default: U, f: F) -> U {
+    fn fold<F: Fn(U, &<Self as ScalarArray>::Scalar)->U>(&self, default: U, f: F) -> U {
         self.iter().fold(default, |acc, row| Cast::<U>::fold(row, acc, &f))
     }
 
     #[inline(always)]
-    fn unary<F: Fn(&<Self as Object>::Scalar)->U>(&self, f: F) -> Self::Output {
+    fn unary<F: Fn(&<Self as ScalarArray>::Scalar)->U>(&self, f: F) -> Self::Output {
         Mat::new(<R as Dim<Vec<C, U>>>::from_iter(self.iter().map(|s| Cast::<U>::unary(s, &f))))
     }
 
     #[inline(always)]
-    fn binary<F: Fn(&<Self as Object>::Scalar, &<Self as Object>::Scalar)->U>(&self, rhs: &Self, f: F) -> Self::Output {
+    fn binary<F: Fn(&<Self as ScalarArray>::Scalar, &<Self as ScalarArray>::Scalar)->U>(&self, rhs: &Self, f: F) -> Self::Output {
         Mat::new(<R as Dim<Vec<C, U>>>::from_iter(self.iter().zip(rhs.iter()).map(|(l, r)| Cast::<U>::binary(l, r, &f))))
     }
 }
@@ -185,7 +185,7 @@ include!(concat!(env!("OUT_DIR"), "/mat.rs"));
 #[cfg(test)]
 mod tests {
     use super::*;
-    use traits::Object;
+    use traits::ScalarArray;
 
     #[test]
     fn test_neg() {
