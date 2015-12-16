@@ -65,18 +65,21 @@ impl <T: Scalar> AsMut<[Vec{c}<T>; {r}]> for Mat{r}x{c}<T> {{  #[inline] fn as_m
 fn impl_unop(f: &mut File, trait_name: &str) -> Result<()> {
     write!(f, "
 impl <T: Scalar, C: Dim<T>, R: Dim<Vec<C, T>>> {trait_name} for Mat<R, C, T>
-where T: {trait_name}<Output=T> {{
-    type Output = Mat<R, C, T>;
-    fn {method_name}(mut self) -> Self::Output {{
-        for a in self.iter_mut() {{ *a = {trait_name}::{method_name}(*a) }}
-        self
-    }}
+where T: {trait_name},
+<T as {trait_name}>::Output: Scalar,
+C: Dim<<T as {trait_name}>::Output>,
+R: Dim<Vec<C, <T as {trait_name}>::Output>> {{
+    type Output = Mat<R, C, <T as {trait_name}>::Output>;
+    fn {method_name}(self) -> Self::Output {{ {trait_name}::{method_name}(&self) }}
 }}
 impl <'a, T: Scalar, C: Dim<T>, R: Dim<Vec<C, T>>> {trait_name} for &'a Mat<R, C, T>
-where &'a T: {trait_name}<Output=T> {{
-    type Output = Mat<R, C, T>;
+where T: {trait_name},
+<T as {trait_name}>::Output: Scalar,
+C: Dim<<T as {trait_name}>::Output>,
+R: Dim<Vec<C, <T as {trait_name}>::Output>> {{
+    type Output = Mat<R, C, <T as {trait_name}>::Output>;
     fn {method_name}(self) -> Self::Output {{
-        Mat(<R as Dim<Vec<C, T>>>::from_iter(self.iter().map({trait_name}::{method_name})))
+        Mat(<R as Dim<Vec<C, <T as {trait_name}>::Output>>>::from_iter(self.iter().map(|v| {trait_name}::{method_name}(*v))))
     }}
 }}\n", trait_name=trait_name, method_name=trait_name.to_lowercase())
 }
@@ -84,33 +87,37 @@ where &'a T: {trait_name}<Output=T> {{
 fn impl_binop(f: &mut File, trait_name: &str) -> Result<()> {
     write!(f, "
 impl <T: Scalar, U: Scalar, C: Dim<T>+Dim<U>, R: Dim<Vec<C, T>>+Dim<Vec<C, U>>> {trait_name}<Mat<R, C, U>> for Mat<R, C, T>
-where T: {trait_name}<U, Output=T> {{
-    type Output = Mat<R, C, T>;
-    fn {method_name}(mut self, rhs: Mat<R, C, U>) -> Self::Output {{
-        for (l, r) in self.iter_mut().zip(rhs.iter()) {{ *l = {trait_name}::{method_name}(*l, *r); }}
-        self
-    }}
+where T: {trait_name}<U>,
+<T as {trait_name}<U>>::Output: Scalar,
+C: Dim<<T as {trait_name}<U>>::Output>,
+R: Dim<Vec<C, <T as {trait_name}<U>>::Output>> {{
+    type Output = Mat<R, C, <T as {trait_name}<U>>::Output>;
+    fn {method_name}(self, rhs: Mat<R, C, U>) -> Self::Output {{ {trait_name}::{method_name}(self, &rhs) }}
 }}
 impl <'t, T: Scalar, U: Scalar, C: Dim<T>+Dim<U>, R: Dim<Vec<C, T>>+Dim<Vec<C, U>>> {trait_name}<Mat<R, C, U>> for &'t Mat<R, C, T>
-where T: {trait_name}<U, Output=T> {{
-    type Output = Mat<R, C, T>;
-    fn {method_name}(self, rhs: Mat<R, C, U>) -> Self::Output {{
-        Mat(<R as Dim<Vec<C, T>>>::from_iter(self.iter().zip(rhs.iter()).map(|(l, r)| {trait_name}::{method_name}(*l, *r))))
-    }}
+where T: {trait_name}<U>,
+<T as {trait_name}<U>>::Output: Scalar,
+C: Dim<<T as {trait_name}<U>>::Output>,
+R: Dim<Vec<C, <T as {trait_name}<U>>::Output>> {{
+    type Output = Mat<R, C, <T as {trait_name}<U>>::Output>;
+    fn {method_name}(self, rhs: Mat<R, C, U>) -> Self::Output {{ {trait_name}::{method_name}(self, &rhs) }}
 }}
 impl <'r, T: Scalar, U: Scalar, C: Dim<T>+Dim<U>, R: Dim<Vec<C, T>>+Dim<Vec<C, U>>> {trait_name}<&'r Mat<R, C, U>> for Mat<R, C, T>
-where T: {trait_name}<U, Output=T> {{
-    type Output = Mat<R, C, T>;
-    fn {method_name}(mut self, rhs: &'r Mat<R, C, U>) -> Self::Output {{
-        for (l, r) in self.iter_mut().zip(rhs.iter()) {{ *l = {trait_name}::{method_name}(*l, *r); }}
-        self
-    }}
+where T: {trait_name}<U>,
+<T as {trait_name}<U>>::Output: Scalar,
+C: Dim<<T as {trait_name}<U>>::Output>,
+R: Dim<Vec<C, <T as {trait_name}<U>>::Output>> {{
+    type Output = Mat<R, C, <T as {trait_name}<U>>::Output>;
+    fn {method_name}(self, rhs: &'r Mat<R, C, U>) -> Self::Output {{ {trait_name}::{method_name}(&self, rhs) }}
 }}
 impl <'t, 'r, T: Scalar, U: Scalar, C: Dim<T>+Dim<U>, R: Dim<Vec<C, T>>+Dim<Vec<C, U>>> {trait_name}<&'r Mat<R, C, U>> for &'t Mat<R, C, T>
-where T: {trait_name}<U, Output=T> {{
-    type Output = Mat<R, C, T>;
+where T: {trait_name}<U>,
+<T as {trait_name}<U>>::Output: Scalar,
+C: Dim<<T as {trait_name}<U>>::Output>,
+R: Dim<Vec<C, <T as {trait_name}<U>>::Output>> {{
+    type Output = Mat<R, C, <T as {trait_name}<U>>::Output>;
     fn {method_name}(self, rhs: &'r Mat<R, C, U>) -> Self::Output {{
-        Mat(<R as Dim<Vec<C, T>>>::from_iter(self.iter().zip(rhs.iter()).map(|(l, r)| {trait_name}::{method_name}(*l, *r))))
+        Mat(<R as Dim<Vec<C, <T as {trait_name}<U>>::Output>>>::from_iter(self.iter().zip(rhs.iter()).map(|(l, r)| {trait_name}::{method_name}(*l, *r))))
     }}
 }}\n", trait_name=trait_name, method_name=trait_name.to_lowercase())
 }
@@ -118,18 +125,21 @@ where T: {trait_name}<U, Output=T> {{
 fn impl_binop_scalar(f: &mut File, trait_name: &str) -> Result<()> {
     write!(f, "
 impl <T: Scalar, U: Scalar, C: Dim<T>, R: Dim<Vec<C, T>>> {trait_name}<U> for Mat<R, C, T>
-where T: {trait_name}<U, Output=T> {{
-    type Output = Mat<R, C, T>;
-    fn {method_name}(mut self, rhs: U) -> Self::Output {{
-        for l in self.iter_mut() {{ *l = {trait_name}::{method_name}(*l, rhs); }}
-        self
-    }}
+where T: {trait_name}<U>,
+<T as {trait_name}<U>>::Output: Scalar,
+C: Dim<<T as {trait_name}<U>>::Output>,
+R: Dim<Vec<C, <T as {trait_name}<U>>::Output>> {{
+    type Output = Mat<R, C, <T as {trait_name}<U>>::Output>;
+    fn {method_name}(self, rhs: U) -> Self::Output {{ {trait_name}::{method_name}(&self, rhs) }}
 }}
 impl <'t, T: Scalar, U: Scalar, C: Dim<T>, R: Dim<Vec<C, T>>> {trait_name}<U> for &'t Mat<R, C, T>
-where T: {trait_name}<U, Output=T> {{
-    type Output = Mat<R, C, T>;
+where T: {trait_name}<U>,
+<T as {trait_name}<U>>::Output: Scalar,
+C: Dim<<T as {trait_name}<U>>::Output>,
+R: Dim<Vec<C, <T as {trait_name}<U>>::Output>> {{
+    type Output = Mat<R, C, <T as {trait_name}<U>>::Output>;
     fn {method_name}(self, rhs: U) -> Self::Output {{
-        Mat(<R as Dim<Vec<C, T>>>::from_iter(self.iter().map(|l| {trait_name}::{method_name}(*l, rhs))))
+        Mat(<R as Dim<Vec<C, <T as {trait_name}<U>>::Output>>>::from_iter(self.iter().map(|l| {trait_name}::{method_name}(*l, rhs))))
     }}
 }}\n", trait_name=trait_name, method_name=trait_name.to_lowercase())
 }

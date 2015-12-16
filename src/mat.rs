@@ -22,6 +22,11 @@ impl <T: Scalar, C: Dim<T>, R: Dim<Vec<C, T>>> ScalarArray for Mat<R, C, T> {
     fn iter_mut(&mut self) -> IterMut<Vec<C, T>> { (self.as_mut() as &mut [Vec<C, T>]).iter_mut() }
     #[inline(always)]
     fn from_value(v: T) -> Self { Mat(<R as Dim<Vec<C, T>>>::from_value(Vec::from_value(v))) }
+
+    #[inline(always)]
+    fn fold<U, F: Fn(U, &T)->U>(&self, init: U, f: F) -> U {
+        self.iter().fold(init, |acc, row| ScalarArray::fold(row, acc, &f))
+    }
 }
 
 impl <T: Scalar, C: Dim<T>, R: Dim<Vec<C, T>>> Mat<R, C, T> {
@@ -33,11 +38,6 @@ impl <T: Scalar, C: Dim<T>, R: Dim<Vec<C, T>>> Mat<R, C, T> {
 
 impl <T: Scalar,  U: Scalar, C: Dim<T>+Dim<U>, R: Dim<Vec<C, T>>+Dim<Vec<C, U>>> Cast<U> for Mat<R, C, T> {
     type Output = Mat<R, C, U>;
-
-    #[inline(always)]
-    fn fold<F: Fn(U, &<Self as ScalarArray>::Scalar)->U>(&self, default: U, f: F) -> U {
-        self.iter().fold(default, |acc, row| Cast::<U>::fold(row, acc, &f))
-    }
 
     #[inline(always)]
     fn unary<F: Fn(&<Self as ScalarArray>::Scalar)->U>(&self, f: F) -> Self::Output {

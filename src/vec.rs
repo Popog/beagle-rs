@@ -1,3 +1,10 @@
+//! An array of Scalars, written `Vec<D, T>` but pronounced 'vector.'
+//!
+//! Vectors support binary operations between two Vectors or between one Vector and one Scalar. All operations operate on each component
+//! separately. All Arithmetic operators and Bitwise operators are supported, where the two Scalar types involved support the operation.
+//!
+//! Vectors also support Negation and Logical negation where the underlying Scalar type(s) support(s) it.
+
 use std::borrow::{Borrow, BorrowMut};
 use std::cmp::Ordering;
 use std::ops::{Index,IndexMut};
@@ -5,6 +12,8 @@ use std::slice::{Iter,IterMut};
 
 use traits::{Scalar,Dim, ScalarArray,Cast, ComponentPartialEq,ComponentEq,ComponentPartialOrd,ComponentOrd};
 
+
+/// Vec is an array of Scalars
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Vec<D, T: Scalar> (D::Output) where D: Dim<T>;
 
@@ -22,15 +31,14 @@ impl <T: Scalar, D: Dim<T>> ScalarArray for Vec<D, T> {
     fn iter_mut(&mut self) -> IterMut<T> { (self.as_mut() as &mut [T]).iter_mut() }
     #[inline(always)]
     fn from_value(v: T) -> Self { Vec(<D as Dim<T>>::from_value(v)) }
+
+    #[inline(always)]
+    fn fold<U, F: Fn(U, &T)->U>(&self, init: U, f: F) -> U { self.iter().fold(init, f) }
 }
+
 
 impl <T: Scalar, U: Scalar, D: Dim<T>+Dim<U>> Cast<U> for Vec<D, T> {
     type Output = Vec<D, U>;
-
-    #[inline(always)]
-    fn fold<F: Fn(U, &<Self as ScalarArray>::Scalar)->U>(&self, default: U, f: F) -> U {
-        self.iter().fold(default, f)
-    }
 
     #[inline(always)]
     fn unary<F: Fn(&<Self as ScalarArray>::Scalar)->U>(&self, f: F) -> Self::Output {

@@ -68,21 +68,21 @@ D: Dim<<{scalar_type} as {trait_name}<T>>::Output> {{
         Vec(<D as Dim<<{scalar_type} as {trait_name}<T>>::Output>>::from_iter(rhs.iter().map(|r| {trait_name}::<T>::{method_name}(*self, *r))))
     }}
 }}
-impl <'r, T: Scalar, D: Dim<T>> {trait_name}<&'r Vec<D, T>> for {scalar_type}
+impl <'u, T: Scalar, D: Dim<T>> {trait_name}<&'u Vec<D, T>> for {scalar_type}
 where {scalar_type}: {trait_name}<T>,
 <{scalar_type} as {trait_name}<T>>::Output: Scalar,
 D: Dim<<{scalar_type} as {trait_name}<T>>::Output> {{
     type Output = Vec<D, <{scalar_type} as {trait_name}<T>>::Output>;
-    fn {method_name}(self, rhs: &'r Vec<D, T>) -> Self::Output {{
+    fn {method_name}(self, rhs: &'u Vec<D, T>) -> Self::Output {{
         Vec(<D as Dim<<{scalar_type} as {trait_name}<T>>::Output>>::from_iter(rhs.iter().map(|r| {trait_name}::<T>::{method_name}(self, *r))))
     }}
 }}
-impl <'t, 'r, T: Scalar, D: Dim<T>> {trait_name}<&'r Vec<D, T>> for &'t {scalar_type}
+impl <'t, 'u, T: Scalar, D: Dim<T>> {trait_name}<&'u Vec<D, T>> for &'t {scalar_type}
 where {scalar_type}: {trait_name}<T>,
 <{scalar_type} as {trait_name}<T>>::Output: Scalar,
 D: Dim<<{scalar_type} as {trait_name}<T>>::Output> {{
     type Output = Vec<D, <{scalar_type} as {trait_name}<T>>::Output>;
-    fn {method_name}(self, rhs: &'r Vec<D, T>) -> Self::Output {{
+    fn {method_name}(self, rhs: &'u Vec<D, T>) -> Self::Output {{
         Vec(<D as Dim<<{scalar_type} as {trait_name}<T>>::Output>>::from_iter(rhs.iter().map(|r| {trait_name}::<T>::{method_name}(*self, *r))))
     }}
 }}", trait_name=trait_name, method_name=trait_name.to_lowercase(), scalar_type=scalar_type));
@@ -95,18 +95,19 @@ D: Dim<<{scalar_type} as {trait_name}<T>>::Output> {{
 fn impl_unop(f: &mut File, trait_name: &str) -> Result<()> {
     write!(f, "
 impl <T: Scalar, D: Dim<T>> {trait_name} for Vec<D, T>
-where T: {trait_name}<Output=T> {{
-    type Output = Vec<D, T>;
-    fn {method_name}(mut self) -> Self::Output {{
-        for a in self.iter_mut() {{ *a = {trait_name}::{method_name}(*a) }}
-        self
-    }}
+where T: {trait_name},
+<T as {trait_name}>::Output: Scalar,
+D: Dim<<T as {trait_name}>::Output> {{
+    type Output = Vec<D, <T as {trait_name}>::Output>;
+    fn {method_name}(self) -> Self::Output {{ {trait_name}::{method_name}(&self) }}
 }}
-impl <'a, T: Scalar, D: Dim<T>> {trait_name} for &'a Vec<D, T>
-where &'a T: {trait_name}<Output=T> {{
-    type Output = Vec<D, T>;
+impl <'t, T: Scalar, D: Dim<T>> {trait_name} for &'t Vec<D, T>
+where T: {trait_name},
+<T as {trait_name}>::Output: Scalar,
+D: Dim<<T as {trait_name}>::Output> {{
+    type Output = Vec<D, <T as {trait_name}>::Output>;
     fn {method_name}(self) -> Self::Output {{
-        Vec(<D as Dim<T>>::from_iter(self.iter().map({trait_name}::{method_name})))
+        Vec(<D as Dim<<T as {trait_name}>::Output>>::from_iter(self.iter().map(|v| {trait_name}::{method_name}(*v))))
     }}
 }}\n", trait_name=trait_name, method_name=trait_name.to_lowercase())
 }
@@ -114,49 +115,50 @@ where &'a T: {trait_name}<Output=T> {{
 fn impl_binop(f: &mut File, trait_name: &str) -> Result<()> {
     write!(f, "
 impl <T: Scalar, U: Scalar, D: Dim<T> + Dim<U>> {trait_name}<Vec<D, U>> for Vec<D, T>
-where T: {trait_name}<U, Output=T> {{
-    type Output = Vec<D, T>;
-    fn {method_name}(mut self, rhs: Vec<D, U>) -> Self::Output {{
-        for (l, r) in self.iter_mut().zip(rhs.iter()) {{ *l = {trait_name}::{method_name}(*l, *r); }}
-        self
-    }}
+where T: {trait_name}<U>,
+<T as {trait_name}<U>>::Output: Scalar,
+D: Dim<<T as {trait_name}<U>>::Output> {{
+    type Output = Vec<D, <T as {trait_name}<U>>::Output>;
+    fn {method_name}(self, rhs: Vec<D, U>) -> Self::Output {{ {trait_name}::{method_name}(&self, &rhs) }}
 }}
 impl <'t, T: Scalar, U: Scalar, D: Dim<T> + Dim<U>> {trait_name}<Vec<D, U>> for &'t Vec<D, T>
-where T: {trait_name}<U, Output=T> {{
-    type Output = Vec<D, T>;
-    fn {method_name}(self, rhs: Vec<D, U>) -> Self::Output {{
-        Vec(<D as Dim<T>>::from_iter(self.iter().zip(rhs.iter()).map(|(l, r)| {trait_name}::{method_name}(*l, *r))))
-    }}
+where T: {trait_name}<U>,
+<T as {trait_name}<U>>::Output: Scalar,
+D: Dim<<T as {trait_name}<U>>::Output> {{
+    type Output = Vec<D, <T as {trait_name}<U>>::Output>;
+    fn {method_name}(self, rhs: Vec<D, U>) -> Self::Output {{ {trait_name}::{method_name}(self, &rhs) }}
 }}
-impl <'r, T: Scalar, U: Scalar, D: Dim<T> + Dim<U>> {trait_name}<&'r Vec<D, U>> for Vec<D, T>
-where T: {trait_name}<U, Output=T> {{
-    type Output = Vec<D, T>;
-    fn {method_name}(mut self, rhs: &'r Vec<D, U>) -> Self::Output {{
-        for (l, r) in self.iter_mut().zip(rhs.iter()) {{ *l = {trait_name}::{method_name}(*l, *r); }}
-        self
-    }}
+impl <'u, T: Scalar, U: Scalar, D: Dim<T> + Dim<U>> {trait_name}<&'u Vec<D, U>> for Vec<D, T>
+where T: {trait_name}<U>,
+<T as {trait_name}<U>>::Output: Scalar,
+D: Dim<<T as {trait_name}<U>>::Output> {{
+    type Output = Vec<D, <T as {trait_name}<U>>::Output>;
+    fn {method_name}(self, rhs: &'u Vec<D, U>) -> Self::Output {{ {trait_name}::{method_name}(&self, rhs) }}
 }}
-impl <'t, 'r, T: Scalar, U: Scalar, D: Dim<T> + Dim<U>> {trait_name}<&'r Vec<D, U>> for &'t Vec<D, T>
-where T: {trait_name}<U, Output=T> {{
-    type Output = Vec<D, T>;
-    fn {method_name}(self, rhs: &'r Vec<D, U>) -> Self::Output {{
-        Vec(<D as Dim<T>>::from_iter(self.iter().zip(rhs.iter()).map(|(l, r)| {trait_name}::{method_name}(*l, *r))))
+impl <'t, 'u, T: Scalar, U: Scalar, D: Dim<T> + Dim<U>> {trait_name}<&'u Vec<D, U>> for &'t Vec<D, T>
+where T: {trait_name}<U>,
+<T as {trait_name}<U>>::Output: Scalar,
+D: Dim<<T as {trait_name}<U>>::Output> {{
+    type Output = Vec<D, <T as {trait_name}<U>>::Output>;
+    fn {method_name}(self, rhs: &'u Vec<D, U>) -> Self::Output {{
+        Vec(<D as Dim<<T as {trait_name}<U>>::Output>>::from_iter(self.iter().zip(rhs.iter()).map(|(l, r)| {trait_name}::{method_name}(*l, *r))))
     }}
 }}
 
 impl <T: Scalar, U: Scalar, D: Dim<T>> {trait_name}<U> for Vec<D, T>
-where T: {trait_name}<U, Output=T> {{
-    type Output = Vec<D, T>;
-    fn {method_name}(mut self, rhs: U) -> Self::Output {{
-        for l in self.iter_mut() {{ *l = {trait_name}::{method_name}(*l, rhs); }}
-        self
-    }}
+where T: {trait_name}<U>,
+<T as {trait_name}<U>>::Output: Scalar,
+D: Dim<<T as {trait_name}<U>>::Output> {{
+    type Output = Vec<D, <T as {trait_name}<U>>::Output>;
+    fn {method_name}(self, rhs: U) -> Self::Output {{ {trait_name}::{method_name}(&self, rhs) }}
 }}
 impl <'t, T: Scalar, U: Scalar, D: Dim<T>> {trait_name}<U> for &'t Vec<D, T>
-where T: {trait_name}<U, Output=T> {{
-    type Output = Vec<D, T>;
+where T: {trait_name}<U>,
+<T as {trait_name}<U>>::Output: Scalar,
+D: Dim<<T as {trait_name}<U>>::Output> {{
+    type Output = Vec<D, <T as {trait_name}<U>>::Output>;
     fn {method_name}(self, rhs: U) -> Self::Output {{
-        Vec(<D as Dim<T>>::from_iter(self.iter().map(|l| {trait_name}::{method_name}(*l, rhs))))
+        Vec(<D as Dim<<T as {trait_name}<U>>::Output>>::from_iter(self.iter().map(|l| {trait_name}::{method_name}(*l, rhs))))
     }}
 }}\n", trait_name=trait_name, method_name=trait_name.to_lowercase())
 }

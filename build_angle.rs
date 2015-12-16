@@ -14,29 +14,46 @@ fn declare_angle(f: &mut File) -> Result<()> {
     }
 
     try!(write!(f,"}};\n"));
-    for name in ["Rad", "Deg"].iter() {
+    for &(name, full_name, turn_prefix, turn_suffix) in [("Rad", "radians", "", "::consts::PI"), ("Deg", "degrees", "360", "")].iter() {
         for size in [32, 64].iter() {
             try!(write!(f,"
+
+/// A {size}-bit floating point angle in {full_name}
 #[derive(Clone, Copy, Debug, Default, PartialEq, PartialOrd)]
 pub struct {name}{size}(pub f{size});
 
 impl Angle for {name}{size} {{
     type Type = f{size};
 
+    // TODO: Convert to associated constant. Blocked by rust-lang/rust#30396
+    //const TURN: Self::Type = {turn_prefix}f{size}{turn_suffix};
+    // The numerical value representing full turn
+    #[inline] fn turn() -> Self::Type {{ {turn_prefix}f{size}{turn_suffix} }}
+
+    /// Computes the sine of a number.
     #[inline] fn sin(self) -> Self::Type {{ Rad{size}::from(self).0.sin() }}
+    /// Computes the cosine of a number
     #[inline] fn cos(self) -> Self::Type {{ Rad{size}::from(self).0.cos() }}
+    /// Computes the tangent of a number
     #[inline] fn tan(self) -> Self::Type {{ Rad{size}::from(self).0.tan() }}
+    /// Simultaneously computes the sine and cosine of the number, `x`. Returns `(sin(x), cos(x))`.
     #[inline] fn sin_cos(self) -> (Self::Type, Self::Type) {{ Rad{size}::from(self).0.sin_cos() }}
 
+    /// Computes the arcsine of a number. Return value is in the range [-TURN/4, TURN/4] or NaN if
+    /// the number is outside the range [-1, 1].
     #[inline] fn asin(s: Self::Type) -> Self {{ s.asin().into() }}
+    /// Computes the arccosine of a number. Return value is in the range [0, TURN/2] or NaN if the
+    /// number is outside the range [-1, 1].
     #[inline] fn acos(s: Self::Type) -> Self {{ s.acos().into() }}
+    /// Computes the arctangent of a number. Return value is in the range [-TURN/4, TURN/4];
     #[inline] fn atan(s: Self::Type) -> Self {{ s.atan().into() }}
-    #[inline] fn atan2(a: Self::Type, b: Self::Type) -> Self {{ a.atan2(b).into() }}
+    /// Computes the four quadrant arctangent of `y` and `x`.
+    #[inline] fn atan2(y: Self::Type, x: Self::Type) -> Self {{ y.atan2(x).into() }}
 }}
 
 impl AsRef<f{size}> for {name}{size} {{ fn as_ref(&self) -> &f{size} {{ &self.0 }} }}
 impl AsMut<f{size}> for {name}{size} {{ fn as_mut(&mut self) -> &mut f{size} {{ &mut self.0 }} }}
-\n", name=name, size=size));
+\n", full_name=full_name, name=name, size=size, turn_prefix=turn_prefix, turn_suffix=turn_suffix));
             for t in types().iter().filter(|t| **t != "bool") {
                 try!(write!(f,"
 impl From<{t:5}> for {name}{size} {{  fn from(v: {t:5}) -> Self {{ {name}{size}(v as f{size}) }}  }}

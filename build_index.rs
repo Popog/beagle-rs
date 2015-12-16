@@ -9,6 +9,7 @@ fn declare_mod(out_dir: &String, prefix: &str, (x,y,z,w): (char,char,char,char))
     let mut f = try!(File::create(&dest_path));
 
     try!(write!(f,"pub mod {prefix}{x}{y}{z}{w} {{
+    // TODO: Remove. Blocked by rust-lang/rust#23121
     use std::mem;
     use std::ops::{{Index,IndexMut}};
 
@@ -68,10 +69,12 @@ fn declare_mod(out_dir: &String, prefix: &str, (x,y,z,w): (char,char,char,char))
     impl <T: Scalar> Index<{prefix}{x}> for Vec{v}<T> {{
         type Output = Vec1<T>;
         #[inline]
+        // TODO: Convert to slice pattern. Blocked by rust-lang/rust#23121
         fn index(&self, _: {prefix}{x}) -> &Self::Output {{ unsafe {{ mem::transmute(&self[{i}usize]) }} }}
     }}
     impl <T: Scalar> IndexMut<{prefix}{x}> for Vec{v}<T> {{
         #[inline]
+        // TODO: Convert to slice pattern. Blocked by rust-lang/rust#23121
         fn index_mut(&mut self, _: {prefix}{x}) -> &mut Self::Output {{ unsafe {{ mem::transmute(&mut self[{i}usize]) }} }}
     }}", prefix=prefix, x=xyzw[i], v=v, i=i));
         }
@@ -86,20 +89,24 @@ fn declare_mod(out_dir: &String, prefix: &str, (x,y,z,w): (char,char,char,char))
     impl <T: Scalar> Index<{prefix}{x}{y}> for Vec{v}<T> {{
         type Output = Vec2<T>;
         #[inline]
+        // TODO: Convert to slice pattern. Blocked by rust-lang/rust#23121
         fn index(&self, _: {prefix}{x}{y}) -> &Self::Output {{ unsafe {{ mem::transmute(&self[{i}usize]) }} }}
     }}
     impl <T: Scalar> IndexMut<{prefix}{x}{y}> for Vec{v}<T> {{
         #[inline]
+        // TODO: Convert to slice pattern. Blocked by rust-lang/rust#23121
         fn index_mut(&mut self, _: {prefix}{x}{y}) -> &mut Self::Output {{ unsafe {{ mem::transmute(&mut self[{i}usize]) }} }}
     }}", prefix=prefix, x=xyzw[i], y=xyzw[j], v=v, i=i));
                 } else {
                     if i != j {
                         // TODO IndexSet
                         try!(write!(f,"
+    // TODO: Implement. Blocked on rust-lang/rfcs#997
     //impl <T: Scalar> IndexSet<{prefix}{x}{y}> for Vec{v}<T> {{}}", prefix=prefix, x=xyzw[i], y=xyzw[j], v=v));
                     }
                     // TODO IndexGet
                     try!(write!(f,"
+    // TODO: Implement. Blocked on rust-lang/rfcs#997
     //impl <T: Scalar> IndexGet<{prefix}{x}{y}> for Vec{v}<T> {{}}", prefix=prefix, x=xyzw[i], y=xyzw[j], v=v));
                 }
             }
@@ -116,20 +123,24 @@ fn declare_mod(out_dir: &String, prefix: &str, (x,y,z,w): (char,char,char,char))
     impl <T: Scalar> Index<{prefix}{x}{y}{z}> for Vec{v}<T> {{
         type Output = Vec3<T>;
         #[inline]
+        // TODO: Convert to slice pattern. Blocked by rust-lang/rust#23121
         fn index(&self, _: {prefix}{x}{y}{z}) -> &Self::Output {{ unsafe {{ mem::transmute(&self[{i}usize]) }} }}
     }}
     impl <T: Scalar> IndexMut<{prefix}{x}{y}{z}> for Vec{v}<T> {{
         #[inline]
+        // TODO: Convert to slice pattern. Blocked by rust-lang/rust#23121
         fn index_mut(&mut self, _: {prefix}{x}{y}{z}) -> &mut Self::Output {{ unsafe {{ mem::transmute(&mut self[{i}usize]) }} }}
     }}", prefix=prefix, x=xyzw[i], y=xyzw[j], z=xyzw[k], v=v, i=i));
                     } else {
                         if i != j && i != k && j != k {
                             // TODO IndexSet
                             try!(write!(f,"
+    // TODO: Implement. Blocked on rust-lang/rfcs#997
     //impl <T: Scalar> IndexSet<{prefix}{x}{y}{z}> for Vec{v}<T> {{}}", prefix=prefix, x=xyzw[i], y=xyzw[j], z=xyzw[k], v=v));
                         }
                         // TODO IndexGet
                         try!(write!(f,"
+    // TODO: Implement. Blocked on rust-lang/rfcs#997
     //impl <T: Scalar> IndexGet<{prefix}{x}{y}{z}> for Vec{v}<T> {{}}", prefix=prefix, x=xyzw[i], y=xyzw[j], z=xyzw[k], v=v));
                     }
                 }
@@ -148,20 +159,24 @@ fn declare_mod(out_dir: &String, prefix: &str, (x,y,z,w): (char,char,char,char))
     impl <T: Scalar> Index<{prefix}{x}{y}{z}{w}> for Vec{v}<T> {{
         type Output = Vec4<T>;
         #[inline]
+        // TODO: Convert to slice pattern. Blocked by rust-lang/rust#23121
         fn index(&self, _: {prefix}{x}{y}{z}{w}) -> &Self::Output {{ unsafe {{ mem::transmute(&self[{i}usize]) }} }}
     }}
     impl <T: Scalar> IndexMut<{prefix}{x}{y}{z}{w}> for Vec{v}<T> {{
         #[inline]
+        // TODO: Convert to slice pattern. Blocked by rust-lang/rust#23121
         fn index_mut(&mut self, _: {prefix}{x}{y}{z}{w}) -> &mut Self::Output {{ unsafe {{ mem::transmute(&mut self[{i}usize]) }} }}
     }}", prefix=prefix, x=xyzw[i], y=xyzw[j], z=xyzw[k], w=xyzw[l], v=v, i=i));
                         } else {
                             if i != j && i != k && i != l && j != k && j != l && k != l {
                                 // TODO IndexSet
                                 try!(write!(f,"
+    // TODO: Implement. Blocked on rust-lang/rfcs#997
     //impl <T: Scalar> IndexSet<{prefix}{x}{y}{z}{w}> for Vec{v}<T> {{}}", prefix=prefix, x=xyzw[i], y=xyzw[j], z=xyzw[k], w=xyzw[l], v=v));
                             }
                             // TODO IndexGet
                             try!(write!(f,"
+    // TODO: Implement. Blocked on rust-lang/rfcs#997
     //impl <T: Scalar> IndexGet<{prefix}{x}{y}{z}{w}> for Vec{v}<T> {{}}", prefix=prefix, x=xyzw[i], y=xyzw[j], z=xyzw[k], w=xyzw[l], v=v));
                         }
                     }

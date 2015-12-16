@@ -1,6 +1,6 @@
 [package]
 name = "beagle"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Popog"]
 description = "A basic linear algebra library for computer graphics."
 build = "build.rs"
