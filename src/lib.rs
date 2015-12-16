@@ -4,5 +4,5 @@
 pub mod angle;
 pub mod index;
 pub mod mat;
-pub mod traits;
+pub mod scalar_array;
 pub mod vec;

@@ -2,7 +2,7 @@ use std::fs::File;
 use std::io::{Write,Result};
 use std::path::Path;
 
-use build_traits::{types};
+use build_scalar_array::{types};
 
 fn declare_angle(f: &mut File) -> Result<()> {
     let un_ops = ["Neg"];

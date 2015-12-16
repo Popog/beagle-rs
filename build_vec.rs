@@ -2,7 +2,7 @@ use std::fs::File;
 use std::io::{Write,Result};
 use std::path::Path;
 
-use build_traits::{types, angle_types};
+use build_scalar_array::{types, angle_types};
 
 fn declare_vec(f: &mut File) -> Result<()> {
     let un_ops = ["Neg", "Not"];
@@ -33,7 +33,7 @@ fn declare_vec(f: &mut File) -> Result<()> {
     for (i, d) in ["One","Two","Three","Four"].iter().enumerate() {
         let i = i+1;
         try!(write!(f,"
-use traits::{d};
+use scalar_array::{d};
 pub type Vec{i}<T> = Vec<{d}, T>;
 
 impl <T: Scalar> From<[T; {i}]> for Vec{i}<T> {{  fn from(v: [T; {i}]) -> Self {{ Vec(v) }}  }}

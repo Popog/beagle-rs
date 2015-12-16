@@ -3,7 +3,7 @@ use std::cmp::Ordering;
 use std::ops::{Index,IndexMut};
 use std::slice::{Iter,IterMut};
 
-use traits::{Scalar,Dim, ScalarArray,Cast, ComponentPartialEq,ComponentEq,ComponentPartialOrd,ComponentOrd};
+use scalar_array::{Scalar,Dim, ScalarArray,Cast, ComponentPartialEq,ComponentEq,ComponentPartialOrd,ComponentOrd};
 use vec::Vec;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -185,7 +185,7 @@ include!(concat!(env!("OUT_DIR"), "/mat.rs"));
 #[cfg(test)]
 mod tests {
     use super::*;
-    use traits::ScalarArray;
+    use scalar_array::ScalarArray;
 
     #[test]
     fn test_neg() {

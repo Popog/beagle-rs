@@ -13,7 +13,7 @@ fn declare_mod(out_dir: &String, prefix: &str, (x,y,z,w): (char,char,char,char))
     use std::mem;
     use std::ops::{{Index,IndexMut}};
 
-    use traits::Scalar;
+    use scalar_array::Scalar;
     use vec::{{", prefix=prefix.to_lowercase(), x=x.to_ascii_lowercase(), y=y.to_ascii_lowercase(), z=z.to_ascii_lowercase(), w=w.to_ascii_lowercase()));
     for i in 1..4+1 {
         try!(write!(f,"Vec{},", i));

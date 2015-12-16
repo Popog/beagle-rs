@@ -2,7 +2,7 @@ use std::fs::File;
 use std::io::{Write,Result};
 use std::path::Path;
 
-use build_traits::{types,angle_types};
+use build_scalar_array::{types,angle_types};
 
 fn declare_mat(f: &mut File) -> Result<()> {
     let un_ops = ["Neg", "Not"];
@@ -39,7 +39,7 @@ fn declare_mat(f: &mut File) -> Result<()> {
 
     for (r, dr) in ["One","Two","Three","Four"].iter().enumerate() {
         let r = r+1;
-        try!(write!(f,"use traits::{};\n", dr));
+        try!(write!(f,"use scalar_array::{};\n", dr));
         try!(write!(f,"use vec::Vec{};\n", r));
         for (c, dc) in ["One","Two","Three","Four"].iter().enumerate() {
             let c = c+1;
