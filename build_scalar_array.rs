@@ -50,7 +50,7 @@ fn impl_scalar_type(f: &mut File) -> Result<()> {
 }
 
 pub fn main(out_dir: &String) {
-    let dest_path = Path::new(&out_dir).join("traits.rs");
+    let dest_path = Path::new(&out_dir).join("scalar_array.rs");
     let mut f = File::create(&dest_path).unwrap();
 
     impl_dim(&mut f).unwrap();

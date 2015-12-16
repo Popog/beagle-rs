@@ -94,6 +94,7 @@ where <Self as ScalarArray>::Scalar: Eq,
 pub trait ComponentPartialOrd: ComponentPartialEq + Cast<Option<Ordering>>
 where <Self as ScalarArray>::Scalar: PartialOrd,
 <Self as ScalarArray>::Dim: Dim<<<Self as Cast<bool>>::Output as ScalarArray>::Type> + Dim<<<Self as Cast<Option<Ordering>>>::Output as ScalarArray>::Type> {
+    // This method returns an ordering between the components of `self` and `rhs` values if one exists
     fn cpt_partial_cmp(&self, rhs: &Self) -> <Self as Cast<Option<Ordering>>>::Output {
         Cast::<Option<Ordering>>::binary(self, rhs, PartialOrd::partial_cmp)
     }
@@ -124,4 +125,4 @@ where <Self as ScalarArray>::Scalar: Ord,
 impl Scalar for Option<Ordering> {}
 impl Scalar for Ordering {}
 
-include!(concat!(env!("OUT_DIR"), "/traits.rs"));
+include!(concat!(env!("OUT_DIR"), "/scalar_array.rs"));
