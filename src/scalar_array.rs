@@ -19,7 +19,8 @@ pub trait Dim<T:Copy>: Copy {
     #[inline(always)]
     fn from_value(v: T) -> Self::Output;
 
-    /// Construct an array from an ExactSizeIterator with len() == the dimension this type represents
+    /// Construct an array from an ExactSizeIterator with len() == the dimension this type
+    /// represents
     #[inline(always)]
     fn from_iter<U>(iterator: U) -> Self::Output
     where U: IntoIterator<Item=T>,
@@ -38,27 +39,32 @@ pub trait ScalarArray {
     /// Construct a matrix/vector from a an array
     #[inline(always)]
     fn new(v: <Self::Dim as Dim<Self::Type>>::Output) -> Self;
-
     /// Get a slice iterator over the elements (the rows for matrices/the scalars for vectors)
     #[inline(always)]
     fn iter(&self) -> Iter<Self::Type>;
-    /// Get a mutable slice iterator over the elements (the rows for matrices/the scalars for vectors)
+    /// Get a mutable slice iterator over the elements (the rows for matrices/the scalars for
+    /// vectors)
     #[inline(always)]
     fn iter_mut(&mut self) -> IterMut<Self::Type>;
-
     /// Construct a matrix/vector from a single scalar value, setting all elements to that value
     #[inline(always)]
     fn from_value(v: Self::Scalar) -> Self;
 
-    /// Fold all the scalar values into a single output given a folding function
+    /// Fold all the scalar values into a single output given two folding functions,
+    /// The first folding function only applies to the first element of the ScalarArray
     #[inline(always)]
-    fn fold<T, F: Fn(T, &Self::Scalar)->T>(&self, init: T, f: F) -> T;
+    fn fold<T, F0: FnOnce(&Self::Scalar)->T, F: Fn(T, &Self::Scalar)->T>(&self, f0: F0, f: F) -> T;
 }
 
 /// Types that can be transformed from into a `ScalarArray` of `<T>`
 pub trait Cast<T: Scalar>: ScalarArray
 where <Self as ScalarArray>::Dim: Dim<<Self::Output as ScalarArray>::Type> {
+    /// The resulting type
     type Output: ScalarArray<Scalar=T, Dim=<Self as ScalarArray>::Dim>;
+
+    // Fold two `ScalarArray`s together using a binary function
+    #[inline(always)]
+    fn fold_together<O, F0: FnOnce(&<Self as ScalarArray>::Scalar, &T)->O, F: Fn(O, &<Self as ScalarArray>::Scalar, &T)->O>(&self, rhs: &Self::Output, f0: F0, f: F) -> O;
 
     /// Transform a single `ScalarArray` using a unary function
     #[inline(always)]
@@ -94,20 +100,26 @@ where <Self as ScalarArray>::Scalar: Eq,
 pub trait ComponentPartialOrd: ComponentPartialEq + Cast<Option<Ordering>>
 where <Self as ScalarArray>::Scalar: PartialOrd,
 <Self as ScalarArray>::Dim: Dim<<<Self as Cast<bool>>::Output as ScalarArray>::Type> + Dim<<<Self as Cast<Option<Ordering>>>::Output as ScalarArray>::Type> {
-    // This method returns an ordering between the components of `self` and `rhs` values if one exists
+    /// This method returns an ordering between the components of `self` and `rhs` values if one
+    /// exists
     fn cpt_partial_cmp(&self, rhs: &Self) -> <Self as Cast<Option<Ordering>>>::Output {
         Cast::<Option<Ordering>>::binary(self, rhs, PartialOrd::partial_cmp)
     }
 
+    /// This method tests less than between the components of `self` and `rhs` values
     fn cpt_lt(&self, rhs: &Self) -> <Self as Cast<bool>>::Output {
         Cast::<bool>::binary(self, rhs, PartialOrd::lt)
     }
+    /// This method tests less than or equal to between the components of `self` and `rhs` values
     fn cpt_le(&self, rhs: &Self) -> <Self as Cast<bool>>::Output {
         Cast::<bool>::binary(self, rhs, PartialOrd::le)
     }
+    /// This method tests greater than between the components of `self` and `rhs` values
     fn cpt_gt(&self, rhs: &Self) -> <Self as Cast<bool>>::Output {
         Cast::<bool>::binary(self, rhs, PartialOrd::gt)
     }
+    /// This method tests greater than or equal to between the components of `self` and `rhs`
+    /// values
     fn cpt_ge(&self, rhs: &Self) -> <Self as Cast<bool>>::Output {
         Cast::<bool>::binary(self, rhs, PartialOrd::ge)
     }
@@ -117,6 +129,7 @@ where <Self as ScalarArray>::Scalar: PartialOrd,
 pub trait ComponentOrd: ComponentEq + ComponentPartialOrd + Cast<Ordering>
 where <Self as ScalarArray>::Scalar: Ord,
 <Self as ScalarArray>::Dim: Dim<<<Self as Cast<bool>>::Output as ScalarArray>::Type> + Dim<<<Self as Cast<Option<Ordering>>>::Output as ScalarArray>::Type> + Dim<<<Self as Cast<Ordering>>::Output as ScalarArray>::Type> {
+    /// This method returns an ordering between the components of `self` and `rhs` values
     fn cpt_cmp(&self, rhs: &Self) -> <Self as Cast<Ordering>>::Output {
         Cast::<Ordering>::binary(self, rhs, Ord::cmp)
     }

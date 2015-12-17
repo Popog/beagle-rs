@@ -15,13 +15,18 @@ pub fn angle_types()  -> &'static [&'static str] {
 fn impl_dim(f: &mut File) -> Result<()> {
     for (i,d) in ["One","Two","Three","Four"].iter().enumerate() {
         let i = i+1;
-        try!(write!(f,"#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+        try!(write!(f,"/// The dimension {i}
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct {d};
 impl <T: Copy> Dim<T> for {d} {{
+    /// An array of the size equal to the dimension this type represents
     type Output = [T;{i}];
+
+    /// Construct an array from a single value, replicating it
     #[inline(always)]
     fn from_value(v: T) -> Self::Output {{ [v; {i}] }}
 
+    /// Construct an array from an ExactSizeIterator with len() == the dimension this type represents
     #[inline(always)]
     fn from_iter<U>(iterator: U) -> Self::Output
     where U: IntoIterator<Item=T>,

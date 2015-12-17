@@ -12,11 +12,17 @@ fn declare_vec(f: &mut File) -> Result<()> {
     for trait_name in un_ops.iter().chain(bin_ops.iter()) {
         try!(write!(f,"{},", trait_name));
     }
-    try!(write!(f,"Deref,DerefMut}};\n"));
+    try!(write!(f,"Deref,DerefMut}};\n\n"));
 
     try!(write!(f,"use angle::{{"));
     for t in angle_types().iter() {
         try!(write!(f,"{},",t));
+    }
+    try!(write!(f,"}};\n"));
+
+    try!(write!(f,"use scalar_array::{{"));
+    for d in ["One","Two","Three","Four"].iter() {
+        try!(write!(f,"{},", d));
     }
     try!(write!(f,"}};\n\n"));
 
@@ -33,7 +39,7 @@ fn declare_vec(f: &mut File) -> Result<()> {
     for (i, d) in ["One","Two","Three","Four"].iter().enumerate() {
         let i = i+1;
         try!(write!(f,"
-use scalar_array::{d};
+/// An alias for Vec&lt;{d}, T&gt;
 pub type Vec{i}<T> = Vec<{d}, T>;
 
 impl <T: Scalar> From<[T; {i}]> for Vec{i}<T> {{  fn from(v: [T; {i}]) -> Self {{ Vec(v) }}  }}
@@ -167,17 +173,17 @@ fn impl_from(f: &mut File) -> Result<()> {
     for t in types().iter().filter(|&t| *t != "bool") {
         for u in types().iter().filter(|&t| *t != "bool") {
             if t == u { continue; }
-            try!(write!(f,"impl <D: Dim<{t}>+Dim<{u}>> From<Vec<D, {u}>> for Vec<D, {t}> {{  fn from(v: Vec<D, {u}>) -> Self {{ Vec(<D as Dim<{t}>>::from_iter(v.iter().map(|&v| v as {t}))) }}  }}\n", t=t, u=u));
+            try!(write!(f,"impl <D: Dim<{t:5}>+Dim<{u:5}>> From<Vec<D, {u:5}>> for Vec<D, {t:5}> {{  fn from(v: Vec<D, {u:5}>) -> Self {{ Vec(<D as Dim<{t:5}>>::from_iter(v.iter().map(|&v| v as {t}))) }}  }}\n", t=t, u=u));
         }
         for u in angle_types().iter() {
             if t == u { continue; }
-            try!(write!(f,"impl <D: Dim<{t}>+Dim<{u}>> From<Vec<D, {u}>> for Vec<D, {t}> {{  fn from(v: Vec<D, {u}>) -> Self {{ Vec(<D as Dim<{t}>>::from_iter(v.iter().map(|&v| v.into()))) }}  }}\n", t=t, u=u));
+            try!(write!(f,"impl <D: Dim<{t:5}>+Dim<{u:5}>> From<Vec<D, {u:5}>> for Vec<D, {t:5}> {{  fn from(v: Vec<D, {u:5}>) -> Self {{ Vec(<D as Dim<{t:5}>>::from_iter(v.iter().map(|&v| v.into()))) }}  }}\n", t=t, u=u));
         }
     }
     for t in angle_types().iter() {
         for u in types().iter().chain(angle_types().iter()).filter(|t| **t != "bool") {
             if t == u { continue; }
-            try!(write!(f,"impl <D: Dim<{t}>+Dim<{u}>> From<Vec<D, {u}>> for Vec<D, {t}> {{  fn from(v: Vec<D, {u}>) -> Self {{ Vec(<D as Dim<{t}>>::from_iter(v.iter().map(|&v| v.into()))) }}  }}\n", t=t, u=u));
+            try!(write!(f,"impl <D: Dim<{t:5}>+Dim<{u:5}>> From<Vec<D, {u:5}>> for Vec<D, {t:5}> {{  fn from(v: Vec<D, {u:5}>) -> Self {{ Vec(<D as Dim<{t:5}>>::from_iter(v.iter().map(|&v| v.into()))) }}  }}\n", t=t, u=u));
         }
     }
     write!(f, "\n")

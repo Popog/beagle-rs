@@ -4,7 +4,7 @@
 use std::{f64,f32};
 
 /// Types that can be used with trigonometric functions
-pub trait Angle : Default {
+pub trait Angle {
     /// The underlying type of the angle
     type Type : Into<Self>;
 

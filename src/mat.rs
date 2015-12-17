@@ -1,11 +1,27 @@
+//! An row-major array of Vectors, written `Mat<R, C, T>` but pronounced 'matrix'.
+//!
+//1! Matrices support binary operations between two Matrices or between one Matrix and one Scalar.
+//! All Arithmetic operators and Bitwise operators are supported, where the two Scalar types
+//! involved support the operation. Most operations operate on each component separately.
+//!
+//! The exceptions is matrix multiplied by matrix, which requires performs a linear algebraic
+//! multiplication and requires the underlying Scalar types to support Add and Mul.
+//!
+//! Matrices can be multiplied by a vector, vector multiplied by matrix, both of which also
+//! require the underlying Scalar types to support Add and Mul.
+//!
+//! Matrices also support Negation and Logical Negation where the underlying Scalar Type supports
+//! it.
+
 use std::borrow::{Borrow, BorrowMut};
 use std::cmp::Ordering;
-use std::ops::{Index,IndexMut};
+use std::ops::{Index,IndexMut,Range,RangeFrom,RangeTo,RangeFull};
 use std::slice::{Iter,IterMut};
 
 use scalar_array::{Scalar,Dim, ScalarArray,Cast, ComponentPartialEq,ComponentEq,ComponentPartialOrd,ComponentOrd};
 use vec::Vec;
 
+/// Mat is a row-major array of Vectors
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Mat<R, C, T: Scalar> (R::Output) where C: Dim<T>, R: Dim<Vec<C, T>>;
 
@@ -23,9 +39,12 @@ impl <T: Scalar, C: Dim<T>, R: Dim<Vec<C, T>>> ScalarArray for Mat<R, C, T> {
     #[inline(always)]
     fn from_value(v: T) -> Self { Mat(<R as Dim<Vec<C, T>>>::from_value(Vec::from_value(v))) }
 
+    /// Fold all the scalar values into a single output given two folding functions,
+    /// The first folding function only applies to the first element of the ScalarArray
     #[inline(always)]
-    fn fold<U, F: Fn(U, &T)->U>(&self, init: U, f: F) -> U {
-        self.iter().fold(init, |acc, row| ScalarArray::fold(row, acc, &f))
+    fn fold<U, F0: FnOnce(&Self::Scalar)->U, F: Fn(U, &Self::Scalar)->U>(&self, f0: F0, f: F) -> U {
+        let init = self[0].fold(f0, &f);
+        self[1..].iter().fold(init, |acc, row| row.fold(|v| f(acc, v), &f))
     }
 }
 
@@ -38,6 +57,13 @@ impl <T: Scalar, C: Dim<T>, R: Dim<Vec<C, T>>> Mat<R, C, T> {
 
 impl <T: Scalar,  U: Scalar, C: Dim<T>+Dim<U>, R: Dim<Vec<C, T>>+Dim<Vec<C, U>>> Cast<U> for Mat<R, C, T> {
     type Output = Mat<R, C, U>;
+
+    // Fold two `ScalarArray`s together using a binary function
+    #[inline(always)]
+    fn fold_together<O, F0: FnOnce(&<Self as ScalarArray>::Scalar, &U)->O, F: Fn(O, &<Self as ScalarArray>::Scalar, &U)->O>(&self, rhs: &Self::Output, f0: F0, f: F) -> O {
+        let init = Cast::<U>::fold_together(&self[0], &rhs[0], f0, &f);
+        self[1..].iter().zip(rhs[1..].iter()).fold(init, |acc, (l, r)| Cast::<U>::fold_together(l, r, |l2, r2| f(acc, l2, r2), &f))
+    }
 
     #[inline(always)]
     fn unary<F: Fn(&<Self as ScalarArray>::Scalar)->U>(&self, f: F) -> Self::Output {
@@ -61,36 +87,49 @@ C: Dim<Vec<R,T>> {
     }
 }
 
-impl <T: Scalar+Default+Add<Output=T>+Mul<Output=T>, C: Dim<T>, R: Dim<Vec<C, T>>+Dim<T>> Mat<R, C, T> {
+impl <T: Scalar, C: Dim<T>, R: Dim<Vec<C, T>>> Mat<R, C, T> {
     #[inline(always)]
-    fn mul_vector(&self, rhs: &Vec<C, T>) -> Vec<R, T> {
-        Vec::new(<R as Dim<T>>::from_iter(self.iter().map(|lhs_row| lhs_row.dot(rhs))))
+    pub fn mul_vector<U: Scalar, V: Scalar>(&self, rhs: &Vec<C, U>) -> Vec<R, V>
+    where C: Dim<U>,
+    R: Dim<V>,
+    T: Mul<U>,
+    <T as Mul<U>>::Output: Into<V>,
+    V: Add<<T as Mul<U>>::Output, Output=V> {
+        Vec::new(<R as Dim<V>>::from_iter(self.iter().map(|lhs_row| lhs_row.dot(rhs))))
     }
 
     #[inline(always)]
-    fn mul_vector_transpose(&self, rhs: &Vec<R, T>) -> Vec<C, T> {
-        Vec::new(<C as Dim<T>>::from_iter(self[0].iter().enumerate().map(
-            |(c, _)|
-            self.iter().zip(rhs.iter()).fold(Default::default(), |sum, (lhs_row, &rhs_value)| sum + lhs_row[c] * rhs_value)
+    pub fn mul_vector_transpose<U: Scalar, V: Scalar>(&self, lhs: &Vec<R, U>) -> Vec<C, V>
+    where C: Dim<V>,
+    R: Dim<U>,
+    U: Mul<T>,
+    <U as Mul<T>>::Output: Into<V>,
+    V: Add<<U as Mul<T>>::Output, Output=V> {
+        Vec::new(<C as Dim<V>>::from_iter(self[0].iter().enumerate().map(
+            |(c, _)| {
+                let init: V = (lhs[0] * self[0][c]).into();
+                lhs[1..].iter().zip(self[1..].iter()).fold(init, |sum, (&lhs_value, rhs_row)| sum + lhs_value * rhs_row[c])
+            }
         )))
     }
-}
 
-impl <T: Scalar+Default+Add<Output=T>+Mul<Output=T>, C: Dim<T>, R: Dim<Vec<C, T>>> Mat<R, C, T> {
     #[inline(always)]
-    fn mul_matrix<C2: Dim<T>>(&self, rhs: &Mat<C, C2, T>) -> Mat<R, C2, T>
-    where R: Dim<Vec<C2,T>>,
-    C: Dim<Vec<C2,T>> {
-        Mat(<R as Dim<Vec<C2, T>>>::from_iter(self.iter().map(|lhs_row| rhs.mul_vector_transpose(lhs_row))))
+    pub fn mul_matrix<U1: Scalar, V1: Scalar, C2: Dim<U1>+Dim<V1>>(&self, rhs: &Mat<C, C2, U1>) -> Mat<R, C2, V1>
+    where R: Dim<Vec<C2,V1>>,
+    C: Dim<Vec<C2,U1>>,
+    T: Mul<U1>,
+    <T as Mul<U1>>::Output: Into<V1>,
+    V1: Add<<T as Mul<U1>>::Output, Output=V1> {
+        Mat(<R as Dim<Vec<C2, V1>>>::from_iter(self.iter().map(|lhs_row: &Vec<C, T>| rhs.mul_vector_transpose(lhs_row))))
     }
 }
 
 impl <T: Scalar, C: Dim<T>, R: Dim<Vec<C, T>>> Deref for Mat<R, C, T> {
     type Target = R::Output;
-    #[inline] fn deref<'a>(&'a self) -> &'a Self::Target { &self.0 }
+    #[inline(always)] fn deref<'a>(&'a self) -> &'a Self::Target { &self.0 }
 }
 impl <T: Scalar, C: Dim<T>, R: Dim<Vec<C, T>>> DerefMut for Mat<R, C, T> {
-    #[inline] fn deref_mut<'a>(&'a mut self) -> &'a mut <Self as Deref>::Target { &mut self.0 }
+    #[inline(always)] fn deref_mut<'a>(&'a mut self) -> &'a mut <Self as Deref>::Target { &mut self.0 }
 }
 
 impl <T: Scalar, C: Dim<T>, R: Dim<Vec<C, T>>> Borrow   <[Vec<C, T>]> for Mat<R, C, T> {  #[inline(always)] fn borrow    (&    self) -> &    [Vec<C, T>] { self.0.borrow() }  }
@@ -98,6 +137,13 @@ impl <T: Scalar, C: Dim<T>, R: Dim<Vec<C, T>>> BorrowMut<[Vec<C, T>]> for Mat<R,
 
 impl <T: Scalar, C: Dim<T>, R: Dim<Vec<C, T>>> AsRef<[Vec<C, T>]> for Mat<R, C, T> {  #[inline(always)] fn as_ref(&    self) -> &    [Vec<C, T>] { self.0.as_ref() }  }
 impl <T: Scalar, C: Dim<T>, R: Dim<Vec<C, T>>> AsMut<[Vec<C, T>]> for Mat<R, C, T> {  #[inline(always)] fn as_mut(&mut self) -> &mut [Vec<C, T>] { self.0.as_mut() }  }
+
+// d888888b d8b   db d8888b. d88888b db    db
+//   `88'   888o  88 88  `8D 88'     `8b  d8'
+//    88    88V8o 88 88   88 88ooooo  `8bd8'
+//    88    88 V8o88 88   88 88~~~~~  .dPYb.
+//   .88.   88  V888 88  .8D 88.     .8P  Y8.
+// Y888888P VP   V8P Y8888D' Y88888P YP    YP
 
 impl <T: Scalar, C: Dim<T>, R: Dim<Vec<C, T>>> Index<usize> for Mat<R, C, T> {
     type Output = Vec<C, T>;
@@ -108,6 +154,44 @@ impl <T: Scalar, C: Dim<T>, R: Dim<Vec<C, T>>> IndexMut<usize> for Mat<R, C, T> 
     #[inline(always)]
     fn index_mut(&mut self, i: usize) -> &mut Self::Output { &mut (self.as_mut() as &mut [Vec<C, T>])[i] }
 }
+impl <T: Scalar, C: Dim<T>, R: Dim<Vec<C, T>>> Index<Range<usize>> for Mat<R, C, T> {
+    type Output = [Vec<C, T>];
+    #[inline(always)]
+    fn index(&self, i: Range<usize>) -> &Self::Output { &(self.as_ref() as &[Vec<C, T>])[i] }
+}
+impl <T: Scalar, C: Dim<T>, R: Dim<Vec<C, T>>> IndexMut<Range<usize>> for Mat<R, C, T> {
+    #[inline(always)]
+    fn index_mut(&mut self, i: Range<usize>) -> &mut Self::Output { &mut (self.as_mut() as &mut [Vec<C, T>])[i] }
+}
+impl <T: Scalar, C: Dim<T>, R: Dim<Vec<C, T>>> Index<RangeTo<usize>> for Mat<R, C, T> {
+    type Output = [Vec<C, T>];
+    #[inline(always)]
+    fn index(&self, i: RangeTo<usize>) -> &Self::Output { &(self.as_ref() as &[Vec<C, T>])[i] }
+}
+impl <T: Scalar, C: Dim<T>, R: Dim<Vec<C, T>>> IndexMut<RangeTo<usize>> for Mat<R, C, T> {
+    #[inline(always)]
+    fn index_mut(&mut self, i: RangeTo<usize>) -> &mut Self::Output { &mut (self.as_mut() as &mut [Vec<C, T>])[i] }
+}
+impl <T: Scalar, C: Dim<T>, R: Dim<Vec<C, T>>> Index<RangeFrom<usize>> for Mat<R, C, T> {
+    type Output = [Vec<C, T>];
+    #[inline(always)]
+    fn index(&self, i: RangeFrom<usize>) -> &Self::Output { &(self.as_ref() as &[Vec<C, T>])[i] }
+}
+impl <T: Scalar, C: Dim<T>, R: Dim<Vec<C, T>>> IndexMut<RangeFrom<usize>> for Mat<R, C, T> {
+    #[inline(always)]
+    fn index_mut(&mut self, i: RangeFrom<usize>) -> &mut Self::Output { &mut (self.as_mut() as &mut [Vec<C, T>])[i] }
+}
+impl <T: Scalar, C: Dim<T>, R: Dim<Vec<C, T>>> Index<RangeFull> for Mat<R, C, T> {
+    type Output = [Vec<C, T>];
+    #[inline(always)]
+    fn index(&self, i: RangeFull) -> &Self::Output { &(self.as_ref() as &[Vec<C, T>])[i] }
+}
+impl <T: Scalar, C: Dim<T>, R: Dim<Vec<C, T>>> IndexMut<RangeFull> for Mat<R, C, T> {
+    #[inline(always)]
+    fn index_mut(&mut self, i: RangeFull) -> &mut Self::Output { &mut (self.as_mut() as &mut [Vec<C, T>])[i] }
+}
+
+
 
 impl<'a, T: Scalar, C: Dim<T>, R: Dim<Vec<C, T>>> IntoIterator for &'a Mat<R, C, T> {
     type Item = &'a Vec<C, T>;
@@ -120,58 +204,137 @@ impl<'a, T: Scalar, C: Dim<T>, R: Dim<Vec<C, T>>> IntoIterator for &'a mut Mat<R
     fn into_iter(self) -> Self::IntoIter { self.iter_mut() }
 }
 
-// Do matrix * matrix
-impl <T: Scalar+Default+Add<Output=T>+Mul<Output=T>, C2: Dim<T>, C: Dim<T>+Dim<Vec<C2,T>>, R: Dim<Vec<C, T>>+Dim<Vec<C2,T>>> Mul<Mat<C, C2,T>> for Mat<R, C, T> {
-    type Output = Mat<R, C2, T>;
-    fn mul(self, rhs: Mat<C, C2, T>) -> Self::Output { Mul::mul(&self, &rhs) }
-}
-impl <'t, T: Scalar+Default+Add<Output=T>+Mul<Output=T>, C2: Dim<T>, C: Dim<T>+Dim<Vec<C2,T>>, R: Dim<Vec<C, T>>+Dim<Vec<C2,T>>> Mul<Mat<C, C2, T>> for &'t Mat<R, C, T> {
-    type Output = Mat<R, C2, T>;
-    fn mul(self, rhs: Mat<C, C2, T>) -> Self::Output { Mul::mul(self, &rhs) }
-}
-impl <'r, T: Scalar+Default+Add<Output=T>+Mul<Output=T>, C2: Dim<T>, C: Dim<T>+Dim<Vec<C2,T>>, R: Dim<Vec<C, T>>+Dim<Vec<C2,T>>> Mul<&'r Mat<C, C2, T>> for Mat<R, C, T> {
-    type Output = Mat<R, C2, T>;
-    fn mul(self, rhs: &'r Mat<C, C2, T>) -> Self::Output { Mul::mul(&self, rhs) }
-}
-impl <'t, 'r, T: Scalar+Default+Add<Output=T>+Mul<Output=T>, C2: Dim<T>, C: Dim<T>+Dim<Vec<C2,T>>, R: Dim<Vec<C, T>>+Dim<Vec<C2,T>>> Mul<&'r Mat<C, C2, T>> for &'t Mat<R, C, T> {
-    type Output = Mat<R, C2, T>;
-    fn mul(self, rhs: &'r Mat<C, C2, T>) -> Self::Output { self.mul_matrix(rhs) }
+// .88b  d88.  .d8b.  d888888b                   .88b  d88.  .d8b.  d888888b
+// 88'YbdP`88 d8' `8b `~~88~~'      8. A .8      88'YbdP`88 d8' `8b `~~88~~'
+// 88  88  88 88ooo88    88         `8.8.8'      88  88  88 88ooo88    88
+// 88  88  88 88~~~88    88           888        88  88  88 88~~~88    88
+// 88  88  88 88   88    88         .d'8`b.      88  88  88 88   88    88
+// YP  YP  YP YP   YP    YP         8' V `8      YP  YP  YP YP   YP    YP
+
+impl <T: Scalar, U: Scalar, R, C, C2> Mul<Mat<C, C2, U>> for Mat<R, C, T>
+where T: Mul<U>,
+<T as Mul<U>>::Output: Scalar+Add<Output=<T as Mul<U>>::Output>,
+C2: Dim<U>+Dim<<T as Mul<U>>::Output>,
+C: Dim<T>+Dim<Vec<C2,U>>,
+R: Dim<Vec<C, T>>+Dim<Vec<C2,<T as Mul<U>>::Output>> {
+    type Output = Mat<R, C2, <T as Mul<U>>::Output>;
+    fn mul(self, rhs: Mat<C, C2, U>) -> Self::Output { self.mul_matrix(&rhs) }
 }
 
-// Do matrix * vector
-impl <T: Scalar+Default+Add<Output=T>+Mul<Output=T>, C: Dim<T>, R: Dim<Vec<C, T>>+Dim<T>> Mul<Vec<C, T>> for Mat<R, C, T> {
-    type Output = Vec<R, T>;
-    fn mul(self, rhs: Vec<C, T>) -> Self::Output { Mul::mul(&self, &rhs) }
-}
-impl <'t, T: Scalar+Default+Add<Output=T>+Mul<Output=T>, C: Dim<T>, R: Dim<Vec<C, T>>+Dim<T>> Mul<Vec<C, T>> for &'t Mat<R, C, T> {
-    type Output = Vec<R, T>;
-    fn mul(self, rhs: Vec<C, T>) -> Self::Output { Mul::mul(self, &rhs) }
-}
-impl <'r, T: Scalar+Default+Add<Output=T>+Mul<Output=T>, C: Dim<T>, R: Dim<Vec<C, T>>+Dim<T>> Mul<&'r Vec<C, T>> for Mat<R, C, T> {
-    type Output = Vec<R, T>;
-    fn mul(self, rhs: &'r Vec<C, T>) -> Self::Output { Mul::mul(&self, rhs) }
-}
-impl <'t, 'r, T: Scalar+Default+Add<Output=T>+Mul<Output=T>, C: Dim<T>, R: Dim<Vec<C, T>>+Dim<T>> Mul<&'r Vec<C, T>> for &'t Mat<R, C, T> {
-    type Output = Vec<R, T>;
-    fn mul(self, rhs: &'r Vec<C, T>) -> Self::Output { self.mul_vector(rhs) }
+impl <'t, T: Scalar, U: Scalar, R, C, C2> Mul<Mat<C, C2, U>> for &'t Mat<R, C, T>
+where T: Mul<U>,
+<T as Mul<U>>::Output: Scalar+Add<Output=<T as Mul<U>>::Output>,
+C2: Dim<U>+Dim<<T as Mul<U>>::Output>,
+C: Dim<T>+Dim<Vec<C2,U>>,
+R: Dim<Vec<C, T>>+Dim<Vec<C2,<T as Mul<U>>::Output>> {
+    type Output = Mat<R, C2, <T as Mul<U>>::Output>;
+    fn mul(self, rhs: Mat<C, C2, U>) -> Self::Output { self.mul_matrix(&rhs) }
 }
 
-// Do vector * matrix
-impl <T: Scalar+Default+Add<Output=T>+Mul<Output=T>, C: Dim<T>, R: Dim<Vec<C, T>>+Dim<T>> Mul<Mat<R, C, T>> for Vec<R, T> {
-    type Output = Vec<C, T>;
-    fn mul(self, rhs: Mat<R, C, T>) -> Self::Output { Mul::mul(&self, &rhs) }
+impl <'r, T: Scalar, U: Scalar, R, C, C2> Mul<&'r Mat<C, C2, U>> for Mat<R, C, T>
+where T: Mul<U>,
+<T as Mul<U>>::Output: Scalar+Add<Output=<T as Mul<U>>::Output>,
+C2: Dim<U>+Dim<<T as Mul<U>>::Output>,
+C: Dim<T>+Dim<Vec<C2,U>>,
+R: Dim<Vec<C, T>>+Dim<Vec<C2,<T as Mul<U>>::Output>> {
+    type Output = Mat<R, C2, <T as Mul<U>>::Output>;
+    fn mul(self, rhs: &'r Mat<C, C2, U>) -> Self::Output { self.mul_matrix(rhs) }
 }
-impl <'t, T: Scalar+Default+Add<Output=T>+Mul<Output=T>, C: Dim<T>, R: Dim<Vec<C, T>>+Dim<T>> Mul<Mat<R, C, T>> for &'t Vec<R, T> {
-    type Output = Vec<C, T>;
-    fn mul(self, rhs: Mat<R, C, T>) -> Self::Output { Mul::mul(self, &rhs) }
+
+impl <'t, 'r, T: Scalar, U: Scalar, R, C, C2> Mul<&'r Mat<C, C2, U>> for &'t Mat<R, C, T>
+where T: Mul<U>,
+<T as Mul<U>>::Output: Scalar+Add<Output=<T as Mul<U>>::Output>,
+C2: Dim<U>+Dim<<T as Mul<U>>::Output>,
+C: Dim<T>+Dim<Vec<C2,U>>,
+R: Dim<Vec<C, T>>+Dim<Vec<C2,<T as Mul<U>>::Output>> {
+    type Output = Mat<R, C2, <T as Mul<U>>::Output>;
+    fn mul(self, rhs: &'r Mat<C, C2, U>) -> Self::Output { self.mul_matrix(rhs) }
 }
-impl <'r, T: Scalar+Default+Add<Output=T>+Mul<Output=T>, C: Dim<T>, R: Dim<Vec<C, T>>+Dim<T>> Mul<&'r Mat<R, C, T>> for Vec<R, T> {
-    type Output = Vec<C, T>;
-    fn mul(self, rhs: &'r Mat<R, C, T>) -> Self::Output { Mul::mul(&self, rhs) }
+
+// .88b  d88.  .d8b.  d888888b                   db    db d88888b  .o88b.
+// 88'YbdP`88 d8' `8b `~~88~~'      8. A .8      88    88 88'     d8P  Y8
+// 88  88  88 88ooo88    88         `8.8.8'      Y8    8P 88ooooo 8P
+// 88  88  88 88~~~88    88           888        `8b  d8' 88~~~~~ 8b
+// 88  88  88 88   88    88         .d'8`b.       `8bd8'  88.     Y8b  d8
+// YP  YP  YP YP   YP    YP         8' V `8         YP    Y88888P  `Y88P'
+
+impl <T: Scalar, U: Scalar, R, C> Mul<Vec<C, U>> for Mat<R, C, T>
+where T: Mul<U>,
+<T as Mul<U>>::Output: Scalar+Add<Output=<T as Mul<U>>::Output>,
+C: Dim<T>+Dim<U>,
+R: Dim<Vec<C, T>>+Dim<<T as Mul<U>>::Output> {
+    type Output = Vec<R, <T as Mul<U>>::Output>;
+    fn mul(self, rhs: Vec<C, U>) -> Self::Output { self.mul_vector(&rhs) }
 }
-impl <'t, 'r, T: Scalar+Default+Add<Output=T>+Mul<Output=T>, C: Dim<T>, R: Dim<Vec<C, T>>+Dim<T>> Mul<&'r Mat<R, C, T>> for &'t Vec<R, T> {
-    type Output = Vec<C, T>;
-    fn mul(self, rhs: &'r Mat<R, C, T>) -> Self::Output { rhs.mul_vector_transpose(self) }
+
+impl <'t, T: Scalar, U: Scalar, R, C> Mul<Vec<C, U>> for &'t Mat<R, C, T>
+where T: Mul<U>,
+<T as Mul<U>>::Output: Scalar+Add<Output=<T as Mul<U>>::Output>,
+C: Dim<T>+Dim<U>,
+R: Dim<Vec<C, T>>+Dim<<T as Mul<U>>::Output> {
+    type Output = Vec<R, <T as Mul<U>>::Output>;
+    fn mul(self, rhs: Vec<C, U>) -> Self::Output { self.mul_vector(&rhs) }
+}
+
+impl <'r, T: Scalar, U: Scalar, R, C> Mul<&'r Vec<C, U>> for Mat<R, C, T>
+where T: Mul<U>,
+<T as Mul<U>>::Output: Scalar+Add<Output=<T as Mul<U>>::Output>,
+C: Dim<T>+Dim<U>,
+R: Dim<Vec<C, T>>+Dim<<T as Mul<U>>::Output> {
+    type Output = Vec<R, <T as Mul<U>>::Output>;
+    fn mul(self, rhs: &'r Vec<C, U>) -> Self::Output { self.mul_vector(rhs) }
+}
+
+impl <'t, 'r, T: Scalar, U: Scalar, R, C> Mul<&'r Vec<C, U>> for &'t Mat<R, C, T>
+where T: Mul<U>,
+<T as Mul<U>>::Output: Scalar+Add<Output=<T as Mul<U>>::Output>,
+C: Dim<T>+Dim<U>,
+R: Dim<Vec<C, T>>+Dim<<T as Mul<U>>::Output> {
+    type Output = Vec<R, <T as Mul<U>>::Output>;
+    fn mul(self, rhs: &'r Vec<C, U>) -> Self::Output { self.mul_vector(rhs) }
+}
+
+// db    db d88888b  .o88b.                   .88b  d88.  .d8b.  d888888b
+// 88    88 88'     d8P  Y8      8. A .8      88'YbdP`88 d8' `8b `~~88~~'
+// Y8    8P 88ooooo 8P           `8.8.8'      88  88  88 88ooo88    88
+// `8b  d8' 88~~~~~ 8b             888        88  88  88 88~~~88    88
+//  `8bd8'  88.     Y8b  d8      .d'8`b.      88  88  88 88   88    88
+//    YP    Y88888P  `Y88P'      8' V `8      YP  YP  YP YP   YP    YP
+
+impl <T: Scalar, U: Scalar, R, C> Mul<Mat<R, C, U>> for Vec<R, T>
+where T: Mul<U>,
+<T as Mul<U>>::Output: Scalar+Add<Output=<T as Mul<U>>::Output>,
+C: Dim<U>+Dim<<T as Mul<U>>::Output>,
+R: Dim<Vec<C, U>>+Dim<T> {
+    type Output = Vec<C, <T as Mul<U>>::Output>;
+    fn mul(self, rhs: Mat<R, C, U>) -> Self::Output { rhs.mul_vector_transpose(&self) }
+}
+
+impl <'t, T: Scalar, U: Scalar, R, C> Mul<Mat<R, C, U>> for &'t Vec<R, T>
+where T: Mul<U>,
+<T as Mul<U>>::Output: Scalar+Add<Output=<T as Mul<U>>::Output>,
+C: Dim<U>+Dim<<T as Mul<U>>::Output>,
+R: Dim<Vec<C, U>>+Dim<T> {
+    type Output = Vec<C, <T as Mul<U>>::Output>;
+    fn mul(self, rhs: Mat<R, C, U>) -> Self::Output { rhs.mul_vector_transpose(self) }
+}
+
+impl <'r, T: Scalar, U: Scalar, R, C> Mul<&'r Mat<R, C, U>> for Vec<R, T>
+where T: Mul<U>,
+<T as Mul<U>>::Output: Scalar+Add<Output=<T as Mul<U>>::Output>,
+C: Dim<U>+Dim<<T as Mul<U>>::Output>,
+R: Dim<Vec<C, U>>+Dim<T> {
+    type Output = Vec<C, <T as Mul<U>>::Output>;
+    fn mul(self, rhs: &'r Mat<R, C, U>) -> Self::Output { rhs.mul_vector_transpose(&self) }
+}
+
+impl <'t, 'r, T: Scalar, U: Scalar, R, C> Mul<&'r Mat<R, C, U>> for &'t Vec<R, T>
+where T: Mul<U>,
+<T as Mul<U>>::Output: Scalar+Add<Output=<T as Mul<U>>::Output>,
+C: Dim<U>+Dim<<T as Mul<U>>::Output>,
+R: Dim<Vec<C, U>>+Dim<T> {
+    type Output = Vec<C, <T as Mul<U>>::Output>;
+    fn mul(self, rhs: &'r Mat<R, C, U>) -> Self::Output { rhs.mul_vector_transpose(self) }
 }
 
 impl <T: Scalar+PartialEq, C: Dim<T>+Dim<bool>, R: Dim<Vec<C, T>>+Dim<Vec<C, bool>>> ComponentPartialEq for Mat<R, C, T> {}
