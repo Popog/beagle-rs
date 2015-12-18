@@ -10,4 +10,4 @@
 A basic linear algebra library for computer graphics.
 
 Beagle is mostly inspired by GLSL (however Beagle is row-major) and attempts to
-recreate the majority its functionality in Rust.
+recreate the majority of its functionality in Rust.
