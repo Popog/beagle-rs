@@ -7,4 +7,4 @@ build = "build.rs"
 repository = "https://github.com/Popog/beagle-rs"
 readme = "README.md"
 keywords = ["gamedev", "math", "matrix", "vector"]
-license = "MIT"
+license = "Apache-2.0"
