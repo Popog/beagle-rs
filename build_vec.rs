@@ -38,6 +38,9 @@ fn declare_vec(f: &mut File) -> Result<()> {
 
     for (i, d) in dims().iter().enumerate() {
         let i = i+1;
+        let tuple = (0..i).fold(String::with_capacity(i*2), |acc, _| acc+"T,");
+        let tpat = (0..i).fold(String::with_capacity(i*3), |acc, i| acc+"v"+i.to_string().as_ref()+",");
+        let selfpat = (0..i).fold(String::with_capacity(i*8), |acc, i| acc+"self["+i.to_string().as_ref()+"],");
         try!(write!(f,"
 /// An alias for Vec&lt;{d}, T&gt;
 pub type Vec{i}<T> = Vec<{d}, T>;
@@ -45,11 +48,14 @@ pub type Vec{i}<T> = Vec<{d}, T>;
 impl <T: Scalar> From<[T; {i}]> for Vec{i}<T> {{  fn from(v: [T; {i}]) -> Self {{ Vec(v) }}  }}
 impl <T: Scalar> Into<[T; {i}]> for Vec{i}<T> {{  fn into(self) -> [T; {i}] {{ self.0 }}  }}
 
+impl <T: Scalar> From<({tuple})> for Vec{i}<T> {{  fn from(({tpat}): ({tuple})) -> Self {{ Vec([{tpat}]) }}  }}
+impl <T: Scalar> Into<({tuple})> for Vec{i}<T> {{  fn into(self) -> ({tuple}) {{ ({selfpat}) }}  }}
+
 impl <T: Scalar> Borrow   <[T; {i}]> for Vec{i}<T> {{  #[inline] fn borrow    (&    self) -> &    [T; {i}] {{ &    self.0 }}  }}
 impl <T: Scalar> BorrowMut<[T; {i}]> for Vec{i}<T> {{  #[inline] fn borrow_mut(&mut self) -> &mut [T; {i}] {{ &mut self.0 }}  }}
 
 impl <T: Scalar> AsRef<[T; {i}]> for Vec{i}<T> {{  #[inline] fn as_ref(&    self) -> &    [T; {i}] {{ &    self.0 }}  }}
-impl <T: Scalar> AsMut<[T; {i}]> for Vec{i}<T> {{  #[inline] fn as_mut(&mut self) -> &mut [T; {i}] {{ &mut self.0 }}  }}\n", i=i, d=d));
+impl <T: Scalar> AsMut<[T; {i}]> for Vec{i}<T> {{  #[inline] fn as_mut(&mut self) -> &mut [T; {i}] {{ &mut self.0 }}  }}\n", i=i, d=d, tuple=tuple, tpat=tpat, selfpat=selfpat));
     }
 
     // TODO: re-enable when it stop breaking rust
