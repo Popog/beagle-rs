@@ -2,7 +2,7 @@ use std::fs::File;
 use std::io::{Write,Result};
 use std::path::Path;
 
-use build_scalar_array::{types,angle_types};
+use build_scalar_array::{types,angle_types,dims};
 
 fn declare_mat(f: &mut File) -> Result<()> {
     let un_ops = ["Neg", "Not"];
@@ -12,11 +12,23 @@ fn declare_mat(f: &mut File) -> Result<()> {
     for trait_name in un_ops.iter().chain(bin_ops.iter()) {
         try!(write!(f,"{},", trait_name));
     }
-    try!(write!(f,"Mul,Deref,DerefMut}};\n\n"));
+    try!(write!(f,"Mul}};\n\n"));
 
     try!(write!(f,"use angle::{{"));
     for t in angle_types().iter() {
         try!(write!(f,"{},",t));
+    }
+    try!(write!(f,"}};\n"));
+
+    try!(write!(f,"use scalar_array::{{"));
+    for d in dims().iter() {
+        try!(write!(f,"{},", d));
+    }
+    try!(write!(f,"}};\n"));
+
+    try!(write!(f,"use vec::{{"));
+    for (d, _) in dims().iter().enumerate() {
+        try!(write!(f,"Vec{},", d+1));
     }
     try!(write!(f,"}};\n\n"));
 
@@ -37,13 +49,15 @@ fn declare_mat(f: &mut File) -> Result<()> {
     }
     try!(impl_binop_scalar(f, "Mul"));
 
-    for (r, dr) in ["One","Two","Three","Four"].iter().enumerate() {
+    for (r, dr) in dims().iter().enumerate() {
         let r = r+1;
-        try!(write!(f,"use scalar_array::{};\n", dr));
-        try!(write!(f,"use vec::Vec{};\n", r));
-        for (c, dc) in ["One","Two","Three","Four"].iter().enumerate() {
+        try!(write!(f,"
+/// An alias for Mat&lt;{dr}, {dr}, T&gt;
+pub type Mat{r}<T> = Mat<{dr}, {dr}, T>;\n", r=r, dr=dr));
+        for (c, dc) in dims().iter().enumerate() {
             let c = c+1;
             try!(write!(f,"
+/// An alias for Mat&lt;{dr}, {dc}, T&gt;
 pub type Mat{r}x{c}<T> = Mat<{dr}, {dc}, T>;
 
 impl <T: Scalar> From<[Vec{c}<T>; {r}]> for Mat{r}x{c}<T> {{  fn from(v: [Vec{c}<T>; {r}]) -> Self {{ Mat(v) }}  }}

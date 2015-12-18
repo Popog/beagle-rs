@@ -135,6 +135,117 @@ where <Self as ScalarArray>::Scalar: Ord,
     }
 }
 
+// TODO: hyperbolic angle functions
+// hyperbolic sine
+//  Tf  sinh(Tf x)
+// hyperbolic cosine
+//  Tf  cosh(Tf x)
+// hyperbolic tangent
+//  Tf  tanh(Tf x)
+// hyperbolic sine
+//  Tf  asinh(Tf x)
+// hyperbolic cosine
+//  Tf  acosh(Tf x)
+// hyperbolic tangent
+//  Tf  atanh(Tf x)
+
+// TODO: exponential functions
+// x^y
+//  Tf  pow(Tf x, Tf y)
+// e^x
+//  Tf  exp(Tf x)
+// ln
+//  Tf  log(Tf x)
+// 2^x
+//  Tf  exp2(Tf x)
+// log2
+//  Tf  log2(Tf x)
+// square root
+//  Tfd sqrt(Tfd x)
+// inverse square root
+//  Tfd inversesqrt(Tfd x)
+
+// TODO: common functions
+// Returns absolute value:
+//  Tfd abs(Tfd x)
+//  Ti  abs(Ti x)
+// Returns -1.0, 0.0, or 1.0:
+//  Tfd sign(Tfd x)
+//  Ti  sign(Ti x)
+// Returns nearest integer <= x:
+//  Tfd floor(Tfd x)
+// Returns nearest integer with absolute value <= absolute value of x:
+//  Tfd trunc(Tfd x)
+// Returns nearest integer, implementation-dependent rounding mode:
+//  Tfd round(Tfd x)
+// Returns nearest integer, 0.5 rounds to nearest even integer:
+//  Tfd roundEven(Tfd x)
+// Returns nearest integer >= x:
+//  Tfd ceil(Tfd x)
+// Returns x - floor(x):
+//  Tfd fract(Tfd x)
+// Returns modulus:
+//  Tfd mod(Tfd x, Tfd y)
+//  Tf  mod(Tf x, float y)
+//  Td  mod(Td x, double y)
+// Returns separate integer and fractional parts:
+//  Tfd modf(Tfd x, out Tfd i)
+// Returns minimum value:
+//  Tfd min(Tfd x, Tfd y)
+//  Tf  min(Tf x, float y)
+//  Td  min(Td x, double y)
+//  Tiu min(Tiu x, Tiu y)
+//  Ti  min(Ti x, int y)
+//  Tu  min(Tu x, uint y)
+// Returns maximum value:
+//  Tfd max(Tfd x, Tfd y)
+//  Tf  max(Tf x, float y)
+//  Td  max(Td x, double y)
+//  Tiu max(Tiu x, Tiu y)
+//  Ti  max(Ti x, int y)
+//  Tu  max(Tu x, uint y)
+// Returns min(max(x, minVal), maxVal):
+//  Tfd clamp(Tfd x, Tfd minVal, Tfd maxVal)
+//  Tf  clamp(Tf x, float minVal, float maxVal)
+//  Td  clamp(Td x, double minVal, double maxVal)
+//  Tiu clamp(Tiu x, Tiu minVal, Tiu maxVal)
+//  Ti  clamp(Ti x, int minVal, int maxVal)
+//  Tu  clamp(Tu x, uint minVal, uint maxVal)
+// Returns linear blend of x and y:
+//  Tfd mix(Tfd x, Tfd y, Tfd a)
+//  Tf  mix(Tf x, Tf y, float a)
+//  Td  mix(Td x, Td y, double a)
+//  Ti  mix(Ti x, Ti y, Ti a)
+//  Tu  mix(Tu x, Tu y, Tu a)
+// Components returned come from x when a components are true, from y when a components are false:
+//  Tfd mix(Tfd x, Tfd y, Tb a)
+//  Tb  mix(Tb x, Tb y, Tb a)
+//  Tiu mix(Tiu x, Tiu y, Tb a)
+// Returns 0.0 if x < edge, else 1.0:
+//  Tfd step(Tfd edge, Tfd x)
+//  Tf  step(float edge, Tf x)
+//  Td  step(double edge, Td x)
+// Clamps and smoothes:
+//  Tfd smoothstep(Tfd edge0, Tfd edge1, Tfd x)
+//  Tf  smoothstep(float edge0, float edge1, Tf x)
+//  Td  smoothstep(double edge0, double edge1, Td x)
+// Returns true if x is NaN:
+//  Tb  isnan(Tfd x)
+// Returns true if x is positive or negative infinity:
+//  Tb  isinf(Tfd x)
+// Returns signed int or uint value of the encoding of a float :
+//  Ti  floatBitsToint (Tf value)
+//  Tu  floatBitsToUint (Tf value)
+// Returns float value of a signed int  or uint encoding of a float :
+//  Tf  intBitsTofloat (Ti value)
+//  Tf uintBitsTofloat (Tu value)
+// Computes and returns a*b + c.Treated as a single operation when using precise:
+//  Tfd  fma(Tfd a, Tfd b, Tfd c)
+// Splits x into a floating-point significand in the range[0.5, 1.0) and an integer exponent of 2:
+//  Tfd  frexp(Tfd x, out Ti exp)
+// Builds a floating-point number from x and the corresponding integral exponent of 2 in exp:
+//  Tfd  ldexp(Tfd x, in Ti exp)
+
 impl Scalar for Option<Ordering> {}
 impl Scalar for Ordering {}
 

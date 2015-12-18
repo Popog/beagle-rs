@@ -5,15 +5,20 @@ use std::path::Path;
 
 pub fn types() -> &'static [&'static str] {
     static TYPES: [&'static str; 11] = ["i64","i32","i16","i8","u64","u32","u16","u8","f64","f32","bool"];
-    return &TYPES;
+    &TYPES
 }
-pub fn angle_types()  -> &'static [&'static str] {
+pub fn angle_types() -> &'static [&'static str] {
     static TYPES: [&'static str; 4] = ["Rad32","Rad64", "Deg32","Deg64"];
-    return &TYPES;
+    &TYPES
+}
+
+pub fn dims() -> &'static [&'static str] {
+    static DIMS: [&'static str; 4] = ["One","Two","Three","Four"];
+    &DIMS
 }
 
 fn impl_dim(f: &mut File) -> Result<()> {
-    for (i,d) in ["One","Two","Three","Four"].iter().enumerate() {
+    for (i,d) in dims().iter().enumerate() {
         let i = i+1;
         try!(write!(f,"/// The dimension {i}
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]

@@ -2,7 +2,7 @@ use std::fs::File;
 use std::io::{Write,Result};
 use std::path::Path;
 
-use build_scalar_array::{types, angle_types};
+use build_scalar_array::{types, angle_types, dims};
 
 fn declare_vec(f: &mut File) -> Result<()> {
     let un_ops = ["Neg", "Not"];
@@ -12,7 +12,7 @@ fn declare_vec(f: &mut File) -> Result<()> {
     for trait_name in un_ops.iter().chain(bin_ops.iter()) {
         try!(write!(f,"{},", trait_name));
     }
-    try!(write!(f,"Deref,DerefMut}};\n\n"));
+    try!(write!(f,"}};\n\n"));
 
     try!(write!(f,"use angle::{{"));
     for t in angle_types().iter() {
@@ -21,7 +21,7 @@ fn declare_vec(f: &mut File) -> Result<()> {
     try!(write!(f,"}};\n"));
 
     try!(write!(f,"use scalar_array::{{"));
-    for d in ["One","Two","Three","Four"].iter() {
+    for d in dims().iter() {
         try!(write!(f,"{},", d));
     }
     try!(write!(f,"}};\n\n"));
@@ -36,7 +36,7 @@ fn declare_vec(f: &mut File) -> Result<()> {
     }
     try!(impl_from(f));
 
-    for (i, d) in ["One","Two","Three","Four"].iter().enumerate() {
+    for (i, d) in dims().iter().enumerate() {
         let i = i+1;
         try!(write!(f,"
 /// An alias for Vec&lt;{d}, T&gt;

@@ -15,7 +15,7 @@
 
 use std::borrow::{Borrow, BorrowMut};
 use std::cmp::Ordering;
-use std::ops::{Index,IndexMut,Range,RangeFrom,RangeTo,RangeFull};
+use std::ops::{Index,IndexMut,Range,RangeFrom,RangeTo,RangeFull,Deref,DerefMut};
 use std::slice::{Iter,IterMut};
 
 use scalar_array::{Scalar,Dim, ScalarArray,Cast, ComponentPartialEq,ComponentEq,ComponentPartialOrd,ComponentOrd};
@@ -26,16 +26,23 @@ use vec::Vec;
 pub struct Mat<R, C, T: Scalar> (R::Output) where C: Dim<T>, R: Dim<Vec<C, T>>;
 
 impl <T: Scalar, C: Dim<T>, R: Dim<Vec<C, T>>> ScalarArray for Mat<R, C, T> {
+    /// The type of the underlying scalar in the array
     type Scalar = T;
+    /// The type of a single element of this type (a single row for matrices/a scalar for vectors)
     type Type = Vec<C, T>;
+    /// The dimension of the scalar array
     type Dim = R;
 
+    /// Construct a matrix from a an array
     #[inline(always)]
     fn new(v: R::Output) -> Self { Mat(v) }
+    /// Get a slice iterator over the elements (the rows for matrices/the scalars for vectors)
     #[inline(always)]
     fn iter(&self) -> Iter<Vec<C, T>> { (self.as_ref() as &[Vec<C, T>]).iter() }
+    /// Get a mutable slice iterator over the elements (the rows)
     #[inline(always)]
     fn iter_mut(&mut self) -> IterMut<Vec<C, T>> { (self.as_mut() as &mut [Vec<C, T>]).iter_mut() }
+    /// Construct a matrix from a single scalar value, setting all elements to that value
     #[inline(always)]
     fn from_value(v: T) -> Self { Mat(<R as Dim<Vec<C, T>>>::from_value(Vec::from_value(v))) }
 
@@ -65,11 +72,13 @@ impl <T: Scalar,  U: Scalar, C: Dim<T>+Dim<U>, R: Dim<Vec<C, T>>+Dim<Vec<C, U>>>
         self[1..].iter().zip(rhs[1..].iter()).fold(init, |acc, (l, r)| Cast::<U>::fold_together(l, r, |l2, r2| f(acc, l2, r2), &f))
     }
 
+    /// Transform a single `ScalarArray` using a unary function
     #[inline(always)]
     fn unary<F: Fn(&<Self as ScalarArray>::Scalar)->U>(&self, f: F) -> Self::Output {
         Mat::new(<R as Dim<Vec<C, U>>>::from_iter(self.iter().map(|s| Cast::<U>::unary(s, &f))))
     }
 
+    /// Transform two binary `ScalarArray`s using a binary function
     #[inline(always)]
     fn binary<F: Fn(&<Self as ScalarArray>::Scalar, &<Self as ScalarArray>::Scalar)->U>(&self, rhs: &Self, f: F) -> Self::Output {
         Mat::new(<R as Dim<Vec<C, U>>>::from_iter(self.iter().zip(rhs.iter()).map(|(l, r)| Cast::<U>::binary(l, r, &f))))
@@ -122,6 +131,15 @@ impl <T: Scalar, C: Dim<T>, R: Dim<Vec<C, T>>> Mat<R, C, T> {
     V1: Add<<T as Mul<U1>>::Output, Output=V1> {
         Mat(<R as Dim<Vec<C2, V1>>>::from_iter(self.iter().map(|lhs_row: &Vec<C, T>| rhs.mul_vector_transpose(lhs_row))))
     }
+
+    // component-wise multiply
+    //  mat matrixCompMult(mat x, mat y)
+    // outer product(where N != M)
+    //  matNxM outerProduct(vecM c, vecN r)
+    // determinant
+    //  float determinant(matN m)
+    // inverse
+    //  matN inverse(matN m)
 }
 
 impl <T: Scalar, C: Dim<T>, R: Dim<Vec<C, T>>> Deref for Mat<R, C, T> {

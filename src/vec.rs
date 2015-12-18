@@ -9,7 +9,7 @@
 
 use std::borrow::{Borrow, BorrowMut};
 use std::cmp::Ordering;
-use std::ops::{Index,IndexMut,Range,RangeFrom,RangeTo,RangeFull};
+use std::ops::{Index,IndexMut,Range,RangeFrom,RangeTo,RangeFull,Deref,DerefMut};
 use std::slice::{Iter,IterMut};
 
 use scalar_array::{Scalar,Dim, ScalarArray,Cast, ComponentPartialEq,ComponentEq,ComponentPartialOrd,ComponentOrd};
@@ -27,17 +27,16 @@ impl <T: Scalar, D: Dim<T>> ScalarArray for Vec<D, T> {
     /// The dimension of the scalar array
     type Dim = D;
 
-    /// Construct a matrix/vector from a an array
+    /// Construct a vector from a an array
     #[inline(always)]
     fn new(v: D::Output) -> Self { Vec(v) }
     /// Get a slice iterator over the elements (the rows for matrices/the scalars for vectors)
     #[inline(always)]
     fn iter(&self) -> Iter<T> { (self.as_ref() as &[T]).iter() }
-    /// Get a mutable slice iterator over the elements (the rows for matrices/the scalars for
-    /// vectors)
+    /// Get a mutable slice iterator over the elements (the scalars)
     #[inline(always)]
     fn iter_mut(&mut self) -> IterMut<T> { (self.as_mut() as &mut [T]).iter_mut() }
-    /// Construct a matrix/vector from a single scalar value, setting all elements to that value
+    /// Construct a vector from a single scalar value, setting all elements to that value
     #[inline(always)]
     fn from_value(v: T) -> Self { Vec(<D as Dim<T>>::from_value(v)) }
 
@@ -92,6 +91,22 @@ impl <T: Scalar, D: Dim<T>> Vec<D, T> {
     V: Add<<T as Mul<U>>::Output, Output=V> {
         Cast::<U>::fold_together(self, rhs, |&l, &r| (l*r).into(), |acc, &l, &r| acc + l*r)
     }
+
+    // TODO: geometric functions
+    // length of vector
+    //  float length(Tf x)
+    // distance between points
+    //  float distance(Tf p0, Tf p1)
+    // cross product
+    //  vec3 cross(vec3 x, vec3 y)
+    // normalize vector to length 1
+    //  Tfd  normalize(Tfd x)
+    // returns N if dot(Nref, I) < 0, else -N
+    //  Tfd  faceforward(Tfd N,  Tfd I, Tfd Nref)
+    // reflection direction I - 2 * dot(N,I) * N
+    //  Tfd  reflect(Tfd I, Tfd N)
+    // refraction vector
+    //  Tfd  refract(Tfd I, Tfd N, float eta)
 }
 
 impl <T: Scalar, D: Dim<T>> Deref for Vec<D, T> {
