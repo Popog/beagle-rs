@@ -62,7 +62,7 @@ where <Self as ScalarArray>::Dim: Dim<<Self::Output as ScalarArray>::Type> {
     /// The resulting type
     type Output: ScalarArray<Scalar=T, Dim=<Self as ScalarArray>::Dim>;
 
-    // Fold two `ScalarArray`s together using a binary function
+    /// Fold two `ScalarArray`s together using a binary function
     #[inline(always)]
     fn fold_together<O, F0: FnOnce(&<Self as ScalarArray>::Scalar, &T)->O, F: Fn(O, &<Self as ScalarArray>::Scalar, &T)->O>(&self, rhs: &Self::Output, f0: F0, f: F) -> O;
 

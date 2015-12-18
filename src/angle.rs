@@ -10,7 +10,7 @@ pub trait Angle: Sized {
 
     // TODO: Convert to associated constant. Blocked by rust-lang/rust#30396
     // const TURN: Self::Type;
-    // The numerical value representing full turn
+    /// The numerical value representing full turn
     #[inline] fn turn() -> Self::Type;
 
     /// Computes the sine of a number.

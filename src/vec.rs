@@ -54,7 +54,7 @@ impl <T: Scalar, U: Scalar, D: Dim<T>+Dim<U>> Cast<U> for Vec<D, T> {
     /// The resulting type
     type Output = Vec<D, U>;
 
-    // Fold two `ScalarArray`s together using a binary function
+    /// Fold two `ScalarArray`s together using a binary function
     #[inline(always)]
     fn fold_together<O, F0: FnOnce(&<Self as ScalarArray>::Scalar, &U)->O, F: Fn(O, &<Self as ScalarArray>::Scalar, &U)->O>(&self, rhs: &Self::Output, f0: F0, f: F) -> O {
         let init = f0(&self[0], &rhs[0]);

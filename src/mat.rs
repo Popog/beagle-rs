@@ -65,7 +65,7 @@ impl <T: Scalar, C: Dim<T>, R: Dim<Vec<C, T>>> Mat<R, C, T> {
 impl <T: Scalar,  U: Scalar, C: Dim<T>+Dim<U>, R: Dim<Vec<C, T>>+Dim<Vec<C, U>>> Cast<U> for Mat<R, C, T> {
     type Output = Mat<R, C, U>;
 
-    // Fold two `ScalarArray`s together using a binary function
+    /// Fold two `ScalarArray`s together using a binary function
     #[inline(always)]
     fn fold_together<O, F0: FnOnce(&<Self as ScalarArray>::Scalar, &U)->O, F: Fn(O, &<Self as ScalarArray>::Scalar, &U)->O>(&self, rhs: &Self::Output, f0: F0, f: F) -> O {
         let init = Cast::<U>::fold_together(&self[0], &rhs[0], f0, &f);

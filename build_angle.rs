@@ -27,7 +27,7 @@ impl Angle for {name}{size} {{
 
     // TODO: Convert to associated constant. Blocked by rust-lang/rust#30396
     //const TURN: Self::Type = {turn_prefix}f{size}{turn_suffix};
-    // The numerical value representing full turn
+    /// The numerical value representing full turn
     #[inline] fn turn() -> Self::Type {{ {turn_prefix}f{size}{turn_suffix} }}
 
     /// Computes the sine of a number.
