@@ -17,7 +17,7 @@ fn bench_add_mat3s(b: &mut Bencher) {
             [7.0, 8.0, 9.0],
         ]);
 
-        let n = test::black_box(1_000_000);
+        let n = test::black_box(10_000);
         for _ in 0..n {
             a = a+a;
         }
@@ -34,7 +34,7 @@ fn bench_mul_mat3s(b: &mut Bencher) {
             [7.0, 8.0, 9.0],
         ]);
 
-        let n = test::black_box(1_000_000);
+        let n = test::black_box(10_000);
         for _ in 0..n {
             a = a*a;
         }
@@ -52,7 +52,7 @@ fn bench_mul_vec_mat3s(b: &mut Bencher) {
         ]);
         let mut b: Vec3<f64> = Vec3::from([1.0, 2.0, 3.0]);
 
-        let n = test::black_box(1_000_000);
+        let n = test::black_box(10_000);
         for _ in 0..n {
             b = a*b;
         }
@@ -65,7 +65,7 @@ fn bench_add_f64(b: &mut Bencher) {
     b.iter(|| {
         let mut a: f64 = 1.0;
 
-        let n = test::black_box(1_000_000);
+        let n = test::black_box(10_000);
         for _ in 0..n {
             a = a+a;
         }
