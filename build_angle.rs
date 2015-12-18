@@ -20,7 +20,7 @@ fn declare_angle(f: &mut File) -> Result<()> {
 
 /// A {size}-bit floating point angle in {full_name}
 #[derive(Clone, Copy, Debug, Default, PartialEq, PartialOrd)]
-pub struct {name}{size}(pub f{size});
+pub struct {name}{size}(f{size});
 
 impl Angle for {name}{size} {{
     type Type = f{size};
