@@ -56,24 +56,46 @@ pub trait ScalarArray {
     fn fold<T, F0: FnOnce(&Self::Scalar)->T, F: Fn(T, &Self::Scalar)->T>(&self, f0: F0, f: F) -> T;
 }
 
-/// Types that can be transformed from into a `ScalarArray` of `<T>`
-pub trait Cast<T: Scalar>: ScalarArray
-where <Self as ScalarArray>::Dim: Dim<<Self::Output as ScalarArray>::Type> {
-    /// The resulting type
-    type Output: ScalarArray<Scalar=T, Dim=<Self as ScalarArray>::Dim>;
+/// Types that can be fold with another `ScalarArray` of the same dimension into single value
+pub trait Fold<Rhs: Scalar>: ScalarArray
+where <Self as ScalarArray>::Dim: Dim<<Self::RhsArray as ScalarArray>::Type> {
+    /// The right hand side type
+    type RhsArray: ScalarArray<Scalar=Rhs, Dim=<Self as ScalarArray>::Dim>;
 
     /// Fold two `ScalarArray`s together using a binary function
     #[inline(always)]
-    fn fold_together<O, F0: FnOnce(&<Self as ScalarArray>::Scalar, &T)->O, F: Fn(O, &<Self as ScalarArray>::Scalar, &T)->O>(&self, rhs: &Self::Output, f0: F0, f: F) -> O;
+    fn fold_together<O, F0: FnOnce(&<Self as ScalarArray>::Scalar, &Rhs)->O, F: Fn(O, &<Self as ScalarArray>::Scalar, &Rhs)->O>(&self, rhs: &Self::RhsArray, f0: F0, f: F) -> O;
+}
+
+/// Types that can be transformed from into a `ScalarArray` of `<O>`
+pub trait Cast<O: Scalar>: ScalarArray
+where <Self as ScalarArray>::Dim: Dim<<Self::Output as ScalarArray>::Type> {
+    /// The resulting type
+    type Output: ScalarArray<Scalar=O, Dim=<Self as ScalarArray>::Dim>;
 
     /// Transform a single `ScalarArray` using a unary function
     #[inline(always)]
-    fn unary<F: Fn(&<Self as ScalarArray>::Scalar)->T>(&self, f: F) -> Self::Output;
+    fn unary<F: Fn(&<Self as ScalarArray>::Scalar)->O>(&self, f: F) -> Self::Output;
 
     /// Transform two binary `ScalarArray`s using a binary function
     #[inline(always)]
-    fn binary<F: Fn(&<Self as ScalarArray>::Scalar, &<Self as ScalarArray>::Scalar)->T>(&self, rhs: &Self, f: F) -> Self::Output;
+    fn binary<F: Fn(&<Self as ScalarArray>::Scalar, &<Self as ScalarArray>::Scalar)->O>(&self, rhs: &Self, f: F) -> Self::Output;
 }
+
+/// Types that can be transformed from into a `ScalarArray` of `<T>`
+pub trait CastBinary<Rhs: Scalar, O: Scalar>: ScalarArray
+where <Self as ScalarArray>::Dim: Dim<<Self::RhsArray as ScalarArray>::Type>+Dim<<Self::Output as ScalarArray>::Type> {
+    /// The right hand side type
+    type RhsArray: ScalarArray<Scalar=Rhs, Dim=<Self as ScalarArray>::Dim>;
+
+    /// The resulting type
+    type Output: ScalarArray<Scalar=O, Dim=<Self as ScalarArray>::Dim>;
+
+    /// Transform two binary `ScalarArray`s using a binary function
+    #[inline(always)]
+    fn binary<F: Fn(&<Self as ScalarArray>::Scalar, &Rhs)->O>(&self, rhs: &Self::RhsArray, f: F) -> Self::Output;
+}
+
 
 /// Types that can be component-wise compared using PartialEq
 pub trait ComponentPartialEq: ScalarArray + Cast<bool>

@@ -18,7 +18,9 @@ use std::cmp::Ordering;
 use std::ops::{Index,IndexMut,Range,RangeFrom,RangeTo,RangeFull,Deref,DerefMut};
 use std::slice::{Iter,IterMut};
 
-use scalar_array::{Scalar,Dim, ScalarArray,Cast, ComponentPartialEq,ComponentEq,ComponentPartialOrd,ComponentOrd};
+use scalar_array::{Scalar,Dim};
+use scalar_array::{ScalarArray,Fold,Cast,CastBinary};
+use scalar_array::{ComponentPartialEq,ComponentEq,ComponentPartialOrd,ComponentOrd};
 use vec::Vec;
 
 /// Mat is a row-major array of Vectors
@@ -62,28 +64,51 @@ impl <T: Scalar, C: Dim<T>, R: Dim<Vec<C, T>>> Mat<R, C, T> {
     }
 }
 
-impl <T: Scalar,  U: Scalar, C: Dim<T>+Dim<U>, R: Dim<Vec<C, T>>+Dim<Vec<C, U>>> Cast<U> for Mat<R, C, T> {
-    type Output = Mat<R, C, U>;
+/// Types that can be transformed from into single value
+impl <T: Scalar, Rhs: Scalar, C: Dim<T>+Dim<Rhs>, R: Dim<Vec<C, T>>+Dim<Vec<C, Rhs>>> Fold<Rhs> for Mat<R, C, T> {
+    /// The right hand side type
+    type RhsArray = Mat<R, C, Rhs>;
 
     /// Fold two `ScalarArray`s together using a binary function
     #[inline(always)]
-    fn fold_together<O, F0: FnOnce(&<Self as ScalarArray>::Scalar, &U)->O, F: Fn(O, &<Self as ScalarArray>::Scalar, &U)->O>(&self, rhs: &Self::Output, f0: F0, f: F) -> O {
-        let init = Cast::<U>::fold_together(&self[0], &rhs[0], f0, &f);
-        self[1..].iter().zip(rhs[1..].iter()).fold(init, |acc, (l, r)| Cast::<U>::fold_together(l, r, |l2, r2| f(acc, l2, r2), &f))
+    fn fold_together<O, F0: FnOnce(&<Self as ScalarArray>::Scalar, &Rhs)->O, F: Fn(O, &<Self as ScalarArray>::Scalar, &Rhs)->O>(&self, rhs: &Self::RhsArray, f0: F0, f: F) -> O {
+        let init = Fold::<Rhs>::fold_together(&self[0], &rhs[0], f0, &f);
+        self[1..].iter().zip(rhs[1..].iter()).fold(init, |acc, (l, r)| Fold::<Rhs>::fold_together(l, r, |l2, r2| f(acc, l2, r2), &f))
     }
+}
+
+
+impl <T: Scalar, O: Scalar, C: Dim<T>+Dim<O>, R: Dim<Vec<C, T>>+Dim<Vec<C, O>>> Cast<O> for Mat<R, C, T> {
+    /// The resulting type
+    type Output = Mat<R, C, O>;
 
     /// Transform a single `ScalarArray` using a unary function
     #[inline(always)]
-    fn unary<F: Fn(&<Self as ScalarArray>::Scalar)->U>(&self, f: F) -> Self::Output {
-        Mat::new(<R as Dim<Vec<C, U>>>::from_iter(self.iter().map(|s| Cast::<U>::unary(s, &f))))
+    fn unary<F: Fn(&<Self as ScalarArray>::Scalar)->O>(&self, f: F) -> Self::Output {
+        Mat::new(<R as Dim<Vec<C, O>>>::from_iter(self.iter().map(|s| Cast::<O>::unary(s, &f))))
     }
 
     /// Transform two binary `ScalarArray`s using a binary function
     #[inline(always)]
-    fn binary<F: Fn(&<Self as ScalarArray>::Scalar, &<Self as ScalarArray>::Scalar)->U>(&self, rhs: &Self, f: F) -> Self::Output {
-        Mat::new(<R as Dim<Vec<C, U>>>::from_iter(self.iter().zip(rhs.iter()).map(|(l, r)| Cast::<U>::binary(l, r, &f))))
+    fn binary<F: Fn(&<Self as ScalarArray>::Scalar, &<Self as ScalarArray>::Scalar)->O>(&self, rhs: &Self, f: F) -> Self::Output {
+        Mat::new(<R as Dim<Vec<C, O>>>::from_iter(self.iter().zip(rhs.iter()).map(|(l, r)| Cast::<O>::binary(l, r, &f))))
     }
 }
+
+impl <T: Scalar, Rhs: Scalar, O: Scalar, C: Dim<T>+Dim<Rhs>+Dim<O>, R: Dim<Vec<C, T>>+Dim<Vec<C, Rhs>>+Dim<Vec<C, O>>> CastBinary<Rhs, O> for Mat<R, C, T> {
+    /// The right hand side type
+    type RhsArray = Mat<R, C, Rhs>;
+
+    /// The resulting type
+    type Output = Mat<R, C, O>;
+
+    /// Transform two binary `ScalarArray`s using a binary function
+    #[inline(always)]
+    fn binary<F: Fn(&<Self as ScalarArray>::Scalar, &Rhs)->O>(&self, rhs: &Self::RhsArray, f: F) -> Self::Output {
+        Mat::new(<R as Dim<Vec<C, O>>>::from_iter(self.iter().zip(rhs.iter()).map(|(l, r)| CastBinary::<Rhs, O>::binary(l, r, &f))))
+    }
+}
+
 
 impl <T: Scalar, C: Dim<T>, R: Dim<Vec<C, T>>> Mat<R, C, T>
 where R: Dim<T>,
@@ -98,38 +123,36 @@ C: Dim<Vec<R,T>> {
 
 impl <T: Scalar, C: Dim<T>, R: Dim<Vec<C, T>>> Mat<R, C, T> {
     #[inline(always)]
-    pub fn mul_vector<U: Scalar, V: Scalar>(&self, rhs: &Vec<C, U>) -> Vec<R, V>
+    fn mul_vector<U: Scalar>(&self, rhs: &Vec<C, U>) -> Vec<R, <T as Mul<U>>::Output>
     where C: Dim<U>,
-    R: Dim<V>,
+    R: Dim<<T as Mul<U>>::Output>,
     T: Mul<U>,
-    <T as Mul<U>>::Output: Into<V>,
-    V: Add<<T as Mul<U>>::Output, Output=V> {
-        Vec::new(<R as Dim<V>>::from_iter(self.iter().map(|lhs_row| lhs_row.dot(rhs))))
+    <T as Mul<U>>::Output: Scalar+Add<Output=<T as Mul<U>>::Output> {
+        Vec::new(<R as Dim<<T as Mul<U>>::Output>>::from_iter(self.iter().map(|lhs_row| lhs_row.dot(rhs))))
     }
 
     #[inline(always)]
-    pub fn mul_vector_transpose<U: Scalar, V: Scalar>(&self, lhs: &Vec<R, U>) -> Vec<C, V>
-    where C: Dim<V>,
+    fn mul_vector_transpose<U: Scalar>(&self, lhs: &Vec<R, U>) -> Vec<C, <U as Mul<T>>::Output>
+    where C: Dim<<U as Mul<T>>::Output>,
     R: Dim<U>,
     U: Mul<T>,
-    <U as Mul<T>>::Output: Into<V>,
-    V: Add<<U as Mul<T>>::Output, Output=V> {
-        Vec::new(<C as Dim<V>>::from_iter(self[0].iter().enumerate().map(
+    <U as Mul<T>>::Output: Scalar+Add<Output=<U as Mul<T>>::Output> {
+        Vec::new(<C as Dim<<U as Mul<T>>::Output>>::from_iter(self[0].iter().enumerate().map(
             |(c, _)| {
-                let init: V = (lhs[0] * self[0][c]).into();
+                let init = lhs[0] * self[0][c];
                 lhs[1..].iter().zip(self[1..].iter()).fold(init, |sum, (&lhs_value, rhs_row)| sum + lhs_value * rhs_row[c])
             }
         )))
     }
 
     #[inline(always)]
-    pub fn mul_matrix<U1: Scalar, V1: Scalar, C2: Dim<U1>+Dim<V1>>(&self, rhs: &Mat<C, C2, U1>) -> Mat<R, C2, V1>
-    where R: Dim<Vec<C2,V1>>,
-    C: Dim<Vec<C2,U1>>,
-    T: Mul<U1>,
-    <T as Mul<U1>>::Output: Into<V1>,
-    V1: Add<<T as Mul<U1>>::Output, Output=V1> {
-        Mat(<R as Dim<Vec<C2, V1>>>::from_iter(self.iter().map(|lhs_row: &Vec<C, T>| rhs.mul_vector_transpose(lhs_row))))
+    fn mul_matrix<U: Scalar, C2: Dim<U>>(&self, rhs: &Mat<C, C2, U>) -> Mat<R, C2, <T as Mul<U>>::Output>
+    where R: Dim<Vec<C2,<T as Mul<U>>::Output>>,
+    C: Dim<Vec<C2,U>>,
+    C2: Dim<<T as Mul<U>>::Output>,
+    T: Mul<U>,
+    <T as Mul<U>>::Output: Scalar+Add<Output=<T as Mul<U>>::Output> {
+        Mat(<R as Dim<Vec<C2, <T as Mul<U>>::Output>>>::from_iter(self.iter().map(|lhs_row: &Vec<C, T>| rhs.mul_vector_transpose(lhs_row))))
     }
 
     // component-wise multiply
