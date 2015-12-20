@@ -1,3 +1,5 @@
+//! A collection of numeric traits and functions.
+
 // Types that can be square-rooted
 pub trait Sqrt {
     fn sqrt(&self) -> Self;

@@ -1,8 +1,8 @@
-
 //! Traits and functions that operate on ScalarArrays
 
 use std::borrow::{BorrowMut};
 use std::cmp::Ordering;
+use std::ops::{Mul};
 use std::slice::{Iter,IterMut};
 
 use angle;
@@ -155,6 +155,19 @@ where <Self as ScalarArray>::Scalar: Ord,
     fn cpt_cmp(&self, rhs: &Self) -> <Self as Cast<Ordering>>::Output {
         Cast::<Ordering>::binary(self, rhs, Ord::cmp)
     }
+}
+
+pub trait ComponentMul<Rhs: Scalar>: ScalarArray
+where <Self as ScalarArray>::Scalar: Mul<Rhs>,
+<<Self as ScalarArray>::Scalar as Mul<Rhs>>::Output: Scalar,
+<Self as ScalarArray>::Dim: Dim<<Self::RhsArray as ScalarArray>::Type>+Dim<<Self::Output as ScalarArray>::Type> {
+    /// The right hand side type
+    type RhsArray: ScalarArray<Scalar=Rhs, Dim=<Self as ScalarArray>::Dim>;
+
+    /// The resulting type
+    type Output: ScalarArray<Scalar=<<Self as ScalarArray>::Scalar as Mul<Rhs>>::Output, Dim=<Self as ScalarArray>::Dim>;
+
+    fn cmp_mul(&self, rhs: &Self::RhsArray) -> Self::Output;
 }
 
 // TODO: hyperbolic angle functions

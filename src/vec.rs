@@ -15,7 +15,7 @@ use std::slice::{Iter,IterMut};
 use num::{Approx,IsNegative,Sqrt};
 use scalar_array::{Scalar,Dim};
 use scalar_array::{ScalarArray,Fold,Cast,CastBinary};
-use scalar_array::{ComponentPartialEq,ComponentEq,ComponentPartialOrd,ComponentOrd};
+use scalar_array::{ComponentPartialEq,ComponentEq,ComponentPartialOrd,ComponentOrd,ComponentMul};
 
 /// Vec is an array of Scalars
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -209,6 +209,7 @@ impl <T: Scalar, D: Dim<T>> Vec<D, T> {
     //  Tfd  refract(Tfd I, Tfd N, float eta)
 }
 
+/// Cross product
 pub fn cross_product<T: Scalar, Rhs:Scalar>(lhs: &Vec3<T>, rhs: &Vec3<Rhs>) -> Vec3<<<T as Mul<Rhs>>::Output as Sub>::Output>
 where T: Mul<Rhs>,
 <T as Mul<Rhs>>::Output: Sub,
@@ -229,6 +230,13 @@ impl <T: Scalar, D: Dim<T>> BorrowMut<[T]> for Vec<D, T> {  #[inline(always)] fn
 
 impl <T: Scalar, D: Dim<T>> AsRef<[T]> for Vec<D, T> {  #[inline(always)] fn as_ref(&    self) -> &    [T] { self.0.as_ref() }  }
 impl <T: Scalar, D: Dim<T>> AsMut<[T]> for Vec<D, T> {  #[inline(always)] fn as_mut(&mut self) -> &mut [T] { self.0.as_mut() }  }
+
+// d888888b d8b   db d8888b. d88888b db    db
+//   `88'   888o  88 88  `8D 88'     `8b  d8'
+//    88    88V8o 88 88   88 88ooooo  `8bd8'
+//    88    88 V8o88 88   88 88~~~~~  .dPYb.
+//   .88.   88  V888 88  .8D 88.     .8P  Y8.
+// Y888888P VP   V8P Y8888D' Y88888P YP    YP
 
 impl <T: Scalar, D: Dim<T>> Index<usize> for Vec<D, T> {
     type Output = T;
@@ -287,10 +295,32 @@ impl<'a, T: Scalar, D: Dim<T>> IntoIterator for &'a mut Vec<D, T> {
     fn into_iter(self) -> Self::IntoIter { self.iter_mut() }
 }
 
+//  .o88b.  .d88b.  .88b  d88. d8888b.  .d88b.  d8b   db d88888b d8b   db d888888b
+// d8P  Y8 .8P  Y8. 88'YbdP`88 88  `8D .8P  Y8. 888o  88 88'     888o  88 `~~88~~'
+// 8P      88    88 88  88  88 88oodD' 88    88 88V8o 88 88ooooo 88V8o 88    88
+// 8b      88    88 88  88  88 88~~~   88    88 88 V8o88 88~~~~~ 88 V8o88    88
+// Y8b  d8 `8b  d8' 88  88  88 88      `8b  d8' 88  V888 88.     88  V888    88
+//  `Y88P'  `Y88P'  YP  YP  YP 88       `Y88P'  VP   V8P Y88888P VP   V8P    YP
+
 impl <T: Scalar+PartialEq, D: Dim<T>+Dim<bool>> ComponentPartialEq for Vec<D, T> {}
 impl <T: Scalar+Eq, D: Dim<T>+Dim<bool>> ComponentEq for Vec<D, T> {}
 impl <T: Scalar+PartialOrd, D: Dim<T>+Dim<bool>+Dim<Option<Ordering>>> ComponentPartialOrd for Vec<D, T> {}
 impl <T: Scalar+Ord, D: Dim<T>+Dim<bool>+Dim<Option<Ordering>>+Dim<Ordering>> ComponentOrd for Vec<D, T> {}
+
+impl <T: Scalar, Rhs: Scalar, D: Dim<T>+Dim<Rhs>> ComponentMul<Rhs> for Vec<D, T>
+where T: Mul<Rhs>,
+<T as Mul<Rhs>>::Output: Scalar,
+D: Dim<<T as Mul<Rhs>>::Output> {
+    /// The right hand side type
+    type RhsArray = Vec<D, Rhs>;
+
+    /// The resulting type
+    type Output = Vec<D, <T as Mul<Rhs>>::Output>;
+
+    fn cmp_mul(&self, rhs: &Self::RhsArray) -> Self::Output {
+        self * rhs
+    }
+}
 
 
 include!(concat!(env!("OUT_DIR"), "/vec.rs"));

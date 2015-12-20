@@ -20,7 +20,7 @@ use std::slice::{Iter,IterMut};
 
 use scalar_array::{Scalar,Dim};
 use scalar_array::{ScalarArray,Fold,Cast,CastBinary};
-use scalar_array::{ComponentPartialEq,ComponentEq,ComponentPartialOrd,ComponentOrd};
+use scalar_array::{ComponentPartialEq,ComponentEq,ComponentPartialOrd,ComponentOrd,ComponentMul};
 use vec::Vec;
 
 /// Mat is a row-major array of Vectors
@@ -155,10 +155,15 @@ impl <T: Scalar, C: Dim<T>, R: Dim<Vec<C, T>>> Mat<R, C, T> {
         Mat(<R as Dim<Vec<C2, <T as Mul<U>>::Output>>>::from_iter(self.iter().map(|lhs_row: &Vec<C, T>| rhs.mul_vector_transpose(lhs_row))))
     }
 
-    // component-wise multiply
-    //  mat matrixCompMult(mat x, mat y)
-    // outer product(where N != M)
-    //  matNxM outerProduct(vecM c, vecN r)
+    /// Outer product
+    #[inline]
+    pub fn outer_product<Rhs: Scalar, Lhs: Scalar+Mul<Rhs, Output=T>>(lhs: &Vec<C, Lhs>, rhs: &Vec<R, Rhs>) -> Self
+    where C: Dim<Lhs>,
+    R: Dim<Rhs> {
+        Mat::new(<R as Dim<Vec<C, T>>>::from_iter(rhs.iter().map(|&r| lhs * r)))
+    }
+
+    // TODO: Matrix functions
     // determinant
     //  float determinant(matN m)
     // inverse
@@ -378,10 +383,33 @@ R: Dim<Vec<C, U>>+Dim<T> {
     fn mul(self, rhs: &'r Mat<R, C, U>) -> Self::Output { rhs.mul_vector_transpose(self) }
 }
 
+//  .o88b.  .d88b.  .88b  d88. d8888b.  .d88b.  d8b   db d88888b d8b   db d888888b
+// d8P  Y8 .8P  Y8. 88'YbdP`88 88  `8D .8P  Y8. 888o  88 88'     888o  88 `~~88~~'
+// 8P      88    88 88  88  88 88oodD' 88    88 88V8o 88 88ooooo 88V8o 88    88
+// 8b      88    88 88  88  88 88~~~   88    88 88 V8o88 88~~~~~ 88 V8o88    88
+// Y8b  d8 `8b  d8' 88  88  88 88      `8b  d8' 88  V888 88.     88  V888    88
+//  `Y88P'  `Y88P'  YP  YP  YP 88       `Y88P'  VP   V8P Y88888P VP   V8P    YP
+
 impl <T: Scalar+PartialEq, C: Dim<T>+Dim<bool>, R: Dim<Vec<C, T>>+Dim<Vec<C, bool>>> ComponentPartialEq for Mat<R, C, T> {}
 impl <T: Scalar+Eq, C: Dim<T>+Dim<bool>, R: Dim<Vec<C, T>>+Dim<Vec<C, bool>>> ComponentEq for Mat<R, C, T> {}
 impl <T: Scalar+PartialOrd, C: Dim<T>+Dim<bool>+Dim<Option<Ordering>>, R: Dim<Vec<C, T>>+Dim<Vec<C, bool>>+Dim<Vec<C, Option<Ordering>>>> ComponentPartialOrd for Mat<R, C, T> {}
 impl <T: Scalar+Ord, C: Dim<T>+Dim<bool>+Dim<Option<Ordering>>+Dim<Ordering>, R: Dim<Vec<C, T>>+Dim<Vec<C, bool>>+Dim<Vec<C, Option<Ordering>>>+Dim<Vec<C, Ordering>>> ComponentOrd for Mat<R, C, T> {}
+
+impl <T: Scalar, Rhs: Scalar, C: Dim<T>+Dim<Rhs>,R: Dim<Vec<C, T>>+Dim<Vec<C, Rhs>>> ComponentMul<Rhs> for Mat<R, C, T>
+where T: Mul<Rhs>,
+<T as Mul<Rhs>>::Output: Scalar,
+C: Dim<<T as Mul<Rhs>>::Output>,
+R: Dim<Vec<C, <T as Mul<Rhs>>::Output>> {
+    /// The right hand side type
+    type RhsArray = Mat<R, C, Rhs>;
+
+    /// The resulting type
+    type Output = Mat<R, C, <T as Mul<Rhs>>::Output>;
+
+    fn cmp_mul(&self, rhs: &Self::RhsArray) -> Self::Output {
+        CastBinary::<Rhs, <T as Mul<Rhs>>::Output>::binary(self, rhs, |&l, &r| l*r)
+    }
+}
 
 
 include!(concat!(env!("OUT_DIR"), "/mat.rs"));
