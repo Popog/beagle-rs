@@ -167,6 +167,7 @@ where <Self as ScalarArray>::Scalar: Mul<Rhs>,
     /// The resulting type
     type Output: ScalarArray<Scalar=<<Self as ScalarArray>::Scalar as Mul<Rhs>>::Output, Dim=<Self as ScalarArray>::Dim>;
 
+    /// This method multiplies the components of `self` with those of `rhs`
     fn cmp_mul(&self, rhs: &Self::RhsArray) -> Self::Output;
 }
 

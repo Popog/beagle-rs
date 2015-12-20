@@ -56,6 +56,7 @@ fn declare_mat(f: &mut File) -> Result<()> {
 pub type Mat{r}<T> = Mat<{dr}, {dr}, T>;
 
 impl <T: Scalar+Mul<Output=T>+Neg<Output=T>+Add<Output=T>> Mat{r}<T> {{
+    /// The determinant of the matrix
     pub fn determinant(&self) -> T {{\n", r=r, dr=dr));
 
         let mut lehmer_sequence = vec![0i32; r];

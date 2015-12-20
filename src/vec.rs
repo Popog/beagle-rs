@@ -98,14 +98,14 @@ impl <T: Scalar, Rhs: Scalar, O: Scalar, D: Dim<T>+Dim<Rhs>+Dim<O>> CastBinary<R
 }
 
 impl <T: Scalar, D: Dim<T>> Vec<D, T> {
-    /// Sum up all the elements
+    /// returns the sum of all the elements of `self`
     #[inline(always)]
     pub fn sum(&self) -> T
     where T: Add<Output=T> {
         self.fold(|&i| i, |sum, &i| sum + i)
     }
 
-    /// Dot product
+    /// returns the dot product of `self` and `rhs`
     #[inline(always)]
     pub fn dot<Rhs: Scalar>(&self, rhs: &Vec<D, Rhs>) -> <T as Mul<Rhs>>::Output
     where D: Dim<Rhs>,
@@ -114,7 +114,7 @@ impl <T: Scalar, D: Dim<T>> Vec<D, T> {
         Fold::<Rhs>::fold_together(self, rhs, |&l, &r| l*r, |acc, &l, &r| acc + l*r)
     }
 
-    /// Length squared
+    /// returns the length squared of `self`
     #[inline(always)]
     pub fn length2(&self) -> <T as Mul>::Output
     where T: Mul,
@@ -122,32 +122,30 @@ impl <T: Scalar, D: Dim<T>> Vec<D, T> {
         self.dot(self)
     }
 
-    /// Length squared
+    /// returns the length of `self`
     #[inline(always)]
     pub fn length(&self) -> <T as Mul>::Output
     where T: Mul,
     <T as Mul>::Output: Sqrt+Add<Output=<T as Mul>::Output> {
         self.length2().sqrt()
     }
-    /// Length squared
+
+    /// returns the normalized version of `self`
     #[inline(always)]
-    pub fn normalize(&self) -> Vec<D, <T as Div<<T as Mul>::Output>>::Output>
-    where <T as Mul>::Output: Scalar+Add<Output=<T as Mul>::Output> + Sqrt,
-    T: Mul+Div<<T as Mul>::Output>,
-    D: Dim<<T as Div<<T as Mul>::Output>>::Output>,
-    <T as Div<<T as Mul>::Output>>::Output: Scalar {
+    pub fn normalize<O:Scalar>(&self) -> Vec<D, O>
+    where O: Scalar+Add<Output=O> + Sqrt,
+    T: Mul<Output=O>+Div<O, Output=O>,
+    D: Dim<O> {
         self / self.length()
     }
 
-    /// returns epsilon.is_zero(cos(θ)), where θ = the angle between `self` and `rhs`.
+    /// returns `epsilon.is_zero(cos(θ))`, where `θ` = the angle between `self` and `rhs`.
     #[inline]
-    pub fn is_perpendicular<Rhs: Scalar+Mul, O>(&self, rhs: &Vec<D, Rhs>, epsilon_squared: &Approx<O>) -> bool
+    pub fn is_perpendicular<Rhs: Scalar+Mul, O:Copy>(&self, rhs: &Vec<D, Rhs>, epsilon_squared: &Approx<O>) -> bool
     where D: Dim<Rhs>,
-    T: Mul+Mul<Rhs>,
-    Rhs: Mul,
-    <T as Mul<Rhs>>::Output: Add<Output=<T as Mul<Rhs>>::Output>+Mul<Output=O>+Copy,
-    <Rhs as Mul>::Output: Add<Output=<Rhs as Mul>::Output>,
-    <T as Mul>::Output: Add<Output=<T as Mul>::Output>+Mul<<Rhs as Mul>::Output, Output=O> {
+    T: Mul<Output=O>+Mul<Rhs, Output=O>,
+    Rhs: Mul<Output=O>,
+    O: Add<Output=O>+Mul<Output=O>, {
         let (a, b) = (self, rhs);
         // We're looking to return abs(cos(θ)) <= ε
         // Proof:
@@ -161,47 +159,42 @@ impl <T: Scalar, D: Dim<T>> Vec<D, T> {
         epsilon_squared.approx_zero(&(a_dot_b * a_dot_b), &(a.length2() * b.length2()))
     }
 
-    /// Distance squared
+    /// returns the distance squared between `self` and `rhs`
     #[inline]
-    pub fn distance2<Rhs: Scalar>(&self, rhs: &Vec<D, Rhs>) -> <<T as Sub<Rhs>>::Output as Mul>::Output
+    pub fn distance2<Rhs: Scalar, O>(&self, rhs: &Vec<D, Rhs>) -> O
     where D: Dim<Rhs>,
-    T: Sub<Rhs>,
-    <T as Sub<Rhs>>::Output: Mul,
-    <<T as Sub<Rhs>>::Output as Mul>::Output: Add<Output=<<T as Sub<Rhs>>::Output as Mul>::Output> {
+    T: Sub<Rhs, Output=O>,
+    O: Mul<Output=O> + Add<Output=O> {
         Fold::<Rhs>::fold_together(self, rhs, |&l, &r| (l-r)*(l-r), |acc, &l, &r| acc + (l-r)*(l-r))
     }
 
-    /// Distance
+    /// returns the distance between `self` and `rhs`
     #[inline]
-    pub fn distance<Rhs: Scalar>(&self, rhs: &Vec<D, Rhs>) -> <<T as Sub<Rhs>>::Output as Mul>::Output
+    pub fn distance<Rhs: Scalar, O>(&self, rhs: &Vec<D, Rhs>) -> O
     where D: Dim<Rhs>,
-    T: Sub<Rhs>,
-    <T as Sub<Rhs>>::Output: Mul,
-    <<T as Sub<Rhs>>::Output as Mul>::Output: Sqrt+Add<Output=<<T as Sub<Rhs>>::Output as Mul>::Output> {
-        Fold::<Rhs>::fold_together(self, rhs, |&l, &r| (l-r)*(l-r), |acc, &l, &r| acc + (l-r)*(l-r)).sqrt()
+    T: Sub<Rhs, Output=O>,
+    O: Mul<Output=O> + Add<Output=O> + Sqrt {
+        self.distance2(rhs).sqrt()
     }
 
-    /// returns self if dot(Nref, I) is negative, else -self
+    /// returns `self` if `nref.dot(i)` is negative, else `-self`
     pub fn faceforward<U: Scalar, V:Scalar>(&self, i: &Vec<D, U>, nref: Vec<D, V>) -> Vec<D, T>
     where T: Neg<Output=T>,
-    D: Dim<U>+Dim<V>+Dim<<T as Neg>::Output>,
+    D: Dim<U>+Dim<V>,
     V: Mul<U>,
     <V as Mul<U>>::Output: IsNegative+Add<Output=<V as Mul<U>>::Output> {
         if nref.dot(i).is_negative() { *self } else { -self }
     }
 
-    /// reflection direction. self - 2 * dot(self,rhs) * rhs
-    pub fn reflect<Rhs: Scalar>(&self, rhs: &Vec<D, Rhs>) -> Vec<D, <T as Sub<<<T as Mul<Rhs>>::Output as Mul<Rhs>>::Output>>::Output>
-    where D: Dim<Rhs>, // The right hand side
-    T: Mul<Rhs>, // Needed for self.dot(rhs)
-    <T as Mul<Rhs>>::Output: Add<Output=<T as Mul<Rhs>>::Output>+Copy+Mul<Rhs>, // Needed for self.dot(rhs) + Needed for 2*r
-    T: Sub<<<T as Mul<Rhs>>::Output as Mul<Rhs>>::Output>,
-    <T as Sub<<<T as Mul<Rhs>>::Output as Mul<Rhs>>::Output>>::Output: Scalar,
-    D: Dim<<T as Sub<<<T as Mul<Rhs>>::Output as Mul<Rhs>>::Output>>::Output> {
+    /// reflection direction. `self - 2 * dot(self,rhs) * rhs`
+    pub fn reflect<Rhs: Scalar, O: Scalar>(&self, rhs: &Vec<D, Rhs>) -> Vec<D, O>
+    where D: Dim<Rhs>+Dim<O>,
+    T: Mul<Rhs, Output=O>+Sub<O, Output=O>,
+    O: Add<Output=O>+Mul<Rhs, Output=O> {
         let l_dot_r = self.dot(rhs);
         let two_ldr = l_dot_r+l_dot_r;
 
-        CastBinary::<Rhs, <T as Sub<<<T as Mul<Rhs>>::Output as Mul<Rhs>>::Output>>::Output>::binary(self, rhs, |&l, &r| l - two_ldr*r)
+        CastBinary::<Rhs, O>::binary(self, rhs, |&l, &r| l - two_ldr*r)
     }
 
     // TODO: geometric functions
@@ -209,13 +202,21 @@ impl <T: Scalar, D: Dim<T>> Vec<D, T> {
     //  Tfd  refract(Tfd I, Tfd N, float eta)
 }
 
-/// Cross product
-pub fn cross_product<T: Scalar, Rhs:Scalar>(lhs: &Vec3<T>, rhs: &Vec3<Rhs>) -> Vec3<<<T as Mul<Rhs>>::Output as Sub>::Output>
-where T: Mul<Rhs>,
-<T as Mul<Rhs>>::Output: Sub,
-<<T as Mul<Rhs>>::Output as Sub>::Output: Scalar {
-    Vec::new([lhs[2]*rhs[3] - lhs[3]*rhs[2], lhs[3]*rhs[1] - lhs[1]*rhs[3], lhs[1]*rhs[2] - lhs[2]*rhs[1]])
+
+/// returns the cross product of `self` and `rhs`
+pub fn cross_product<Lhs: Scalar, Rhs: Scalar, O: Scalar>(lhs: &Vec3<Lhs>, rhs: &Vec3<Rhs>) -> Vec3<O>
+where Lhs: Mul<Rhs, Output=O>,
+O: Sub<Output=O> { lhs.cross_product(rhs) }
+
+impl<T: Scalar> Vec3<T> {
+    /// returns the cross product of `self` and `rhs`
+    pub fn cross_product<Rhs: Scalar, O: Scalar>(&self, rhs: &Vec3<Rhs>) -> Vec3<O>
+    where T: Mul<Rhs, Output=O>,
+    O: Sub<Output=O> {
+        Vec::new([self[2]*rhs[3] - self[3]*rhs[2], self[3]*rhs[1] - self[1]*rhs[3], self[1]*rhs[2] - self[2]*rhs[1]])
+    }
 }
+
 
 impl <T: Scalar, D: Dim<T>> Deref for Vec<D, T> {
     type Target = D::Output;

@@ -164,8 +164,6 @@ impl <T: Scalar, C: Dim<T>, R: Dim<Vec<C, T>>> Mat<R, C, T> {
     }
 
     // TODO: Matrix functions
-    // determinant
-    //  float determinant(matN m)
     // inverse
     //  matN inverse(matN m)
 }
