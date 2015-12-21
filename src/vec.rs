@@ -151,9 +151,8 @@ impl <T: Scalar, D: Dim<T>> Vec<D, T> {
 
     /// Returns the normalized version of `self`.
     #[inline(always)]
-    pub fn normalize<O:Scalar>(&self) -> Vec<D, O>
-    where O: Scalar+Add<Output=O> + Sqrt,
-    T: Mul<Output=O>+Div<O, Output=O>,
+    pub fn normalize<O:Scalar+Sqrt+Add<Output=O>>(&self) -> Vec<D, O>
+    where T: Mul<Output=O>+Div<O, Output=O>,
     D: Dim<O> {
         self / self.length()
     }
@@ -205,7 +204,7 @@ impl <T: Scalar, D: Dim<T>> Vec<D, T> {
         if nref.dot(i).is_negative() { *self } else { -self }
     }
 
-    /// Relfects `self` against `rhs` as `self - 2 * dot(self,rhs) * rhs`.
+    /// Reflects `self` against `rhs` as `self - 2 * dot(self,rhs) * rhs`.
     pub fn reflect<Rhs: Scalar, O: Scalar>(&self, rhs: &Vec<D, Rhs>) -> Vec<D, O>
     where D: Dim<Rhs>+Dim<O>,
     T: Mul<Rhs, Output=O>+Sub<O, Output=O>,
@@ -221,14 +220,52 @@ impl <T: Scalar, D: Dim<T>> Vec<D, T> {
     //  Tfd  refract(Tfd I, Tfd N, float eta)
 }
 
+/// Returns the sum of all the elements of `v`.
+#[inline(always)]
+pub fn sum<T: Scalar, D: Dim<T>>(v: &Vec<D, T>) -> T
+where T: Add<Output=T> { v.sum() }
 
-/// Returns the cross product of `self` and `rhs`.
-pub fn cross_product<Lhs: Scalar, Rhs: Scalar, O: Scalar>(lhs: &Vec3<Lhs>, rhs: &Vec3<Rhs>) -> Vec3<O>
-where Lhs: Mul<Rhs, Output=O>,
-O: Sub<Output=O> { lhs.cross_product(rhs) }
+/// Returns the dot product of `lhs` and `rhs`.
+#[inline(always)]
+pub fn dot<Rhs: Scalar, T: Scalar+Mul<Rhs>, D: Dim<T>+Dim<Rhs>>(lhs: &Vec<D, T>, rhs: &Vec<D, Rhs>) -> <T as Mul<Rhs>>::Output
+where <T as Mul<Rhs>>::Output: Add<Output=<T as Mul<Rhs>>::Output> { lhs.dot(rhs) }
+
+/// Returns the length squared of `v`.
+#[inline(always)]
+pub fn length2<T: Scalar+Mul, D: Dim<T>>(v: &Vec<D, T>) -> <T as Mul>::Output
+where <T as Mul>::Output: Add<Output=<T as Mul>::Output> { v.length2() }
+
+/// Returns the length of `v`.
+#[inline(always)]
+pub fn length<T: Scalar+Mul, D: Dim<T>>(v: &Vec<D, T>) -> <T as Mul>::Output
+where <T as Mul>::Output: Sqrt+Add<Output=<T as Mul>::Output> { v.length() }
+
+/// Returns the normalized version of `v`.
+#[inline(always)]
+pub fn normalize<O:Scalar+Sqrt+Add<Output=O>, T: Scalar+Mul<Output=O>+Div<O, Output=O>, D: Dim<T>+Dim<O>>(v: &Vec<D, T>) -> Vec<D, O> { v.normalize() }
+
+/// Returns the distance squared between `lhs` and `rhs`.
+#[inline]
+pub fn distance2<O: Mul<Output=O> + Add<Output=O>, Rhs: Scalar, T: Scalar+Sub<Rhs, Output=O>, D: Dim<T>+Dim<Rhs>>(lhs: &Vec<D, T>, rhs: &Vec<D, Rhs>) -> O { lhs.distance2(rhs) }
+
+/// Returns the distance between `lhs` and `rhs`.
+#[inline]
+pub fn distance<O: Sqrt + Mul<Output=O> + Add<Output=O>, Rhs: Scalar, T: Scalar+Sub<Rhs, Output=O>, D: Dim<T>+Dim<Rhs>>(lhs: &Vec<D, T>, rhs: &Vec<D, Rhs>) -> O { lhs.distance(rhs) }
+
+/// Returns `n` if `nref.dot(i)` is negative, else `-n`.
+pub fn faceforward<T: Scalar+Neg<Output=T>, U: Scalar, V:Scalar+Mul<U>, D: Dim<T>+Dim<U>+Dim<V>>(n: &Vec<D, T>, i: &Vec<D, U>, nref: Vec<D, V>) -> Vec<D, T>
+where <V as Mul<U>>::Output: IsNegative+Add<Output=<V as Mul<U>>::Output> {
+    n.faceforward(i, nref)
+}
+
+/// Reflects `lhs` against `rhs` as `lhs - 2 * dot(lhs,rhs) * rhs`.
+pub fn reflect<Rhs: Scalar, O: Scalar + Add<Output=O>+Mul<Rhs, Output=O>, T: Scalar+Mul<Rhs, Output=O>+Sub<O, Output=O>, D: Dim<T>+Dim<Rhs>+Dim<O>>(lhs: &Vec<D, T>, rhs: &Vec<D, Rhs>) -> Vec<D, O> {
+    lhs.reflect(rhs)
+}
 
 impl<T: Scalar> Vec3<T> {
     /// Returns the cross product of `self` and `rhs`
+    #[inline(always)]
     pub fn cross_product<Rhs: Scalar, O: Scalar>(&self, rhs: &Vec3<Rhs>) -> Vec3<O>
     where T: Mul<Rhs, Output=O>,
     O: Sub<Output=O> {
@@ -236,6 +273,11 @@ impl<T: Scalar> Vec3<T> {
     }
 }
 
+/// Returns the cross product of `lhs` and `rhs`.
+#[inline(always)]
+pub fn cross_product<Lhs: Scalar, Rhs: Scalar, O: Scalar>(lhs: &Vec3<Lhs>, rhs: &Vec3<Rhs>) -> Vec3<O>
+where Lhs: Mul<Rhs, Output=O>,
+O: Sub<Output=O> { lhs.cross_product(rhs) }
 
 impl <T: Scalar, D: Dim<T>> Deref for Vec<D, T> {
     type Target = D::Output;
@@ -337,7 +379,7 @@ D: Dim<<T as Mul<Rhs>>::Output> {
 
     /// The resulting type.
     type Output = Vec<D, <T as Mul<Rhs>>::Output>;
-    
+
     /// Multiplies the components of `self` and `rhs`.
     fn cmp_mul(&self, rhs: &Self::RhsArray) -> Self::Output {
         self * rhs
