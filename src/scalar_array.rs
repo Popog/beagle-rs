@@ -1,4 +1,6 @@
-//! Traits and functions that operate on ScalarArrays
+//! Traits and functions that operate on ScalarArrays.
+
+// TODO: more commments
 
 use std::borrow::{BorrowMut};
 use std::cmp::Ordering;
@@ -7,167 +9,168 @@ use std::slice::{Iter,IterMut};
 
 use angle;
 
-/// Types that can be held in a Matrix/Vector scalar value
+/// Types that can be held in a Matrix/Vector.
 pub trait Scalar: Copy {}
 
-/// Types that represent a dimension
+/// Types that represent a dimension.
 pub trait Dim<T:Copy>: Copy {
-    /// An array of the size equal to the dimension this type represents
+    /// An array of the size equal to the dimension this type represents.
     type Output: Copy+AsMut<[T]>+AsRef<[T]>+BorrowMut<[T]>;
 
-    /// Construct an array from a single value, replicating it
+    /// Construct an array from a single value `v`, replicating it to all positions in the array.
     #[inline(always)]
     fn from_value(v: T) -> Self::Output;
 
     /// Construct an array from an ExactSizeIterator with len() == the dimension this type
-    /// represents
+    /// represents.
     #[inline(always)]
     fn from_iter<U>(iterator: U) -> Self::Output
     where U: IntoIterator<Item=T>,
     U::IntoIter: ExactSizeIterator;
 }
 
-/// Types that represent an array of scalars (a matrix or a vector)
+/// Types that represent an array of scalars (a matrix or a vector).
 pub trait ScalarArray {
-    /// The type of the underlying scalar in the array
+    /// The type of the underlying scalar in the array.
     type Scalar: Scalar;
-    /// The type of a single element of this type (a single row for matrices/a scalar for vectors)
+    /// The type of a single element of this type (a single row for matrices/a scalar for vectors).
     type Type: Copy;
-    /// The dimension of the scalar array
+    /// The dimension of the scalar array.
     type Dim: Dim<Self::Type>;
 
-    /// Construct a matrix/vector from a an array
+    /// Constructs a matrix/vector from a an array (`v`) of the underlying type. Most useful in
+    /// conjuction with `Dim::from_iter`.
     #[inline(always)]
     fn new(v: <Self::Dim as Dim<Self::Type>>::Output) -> Self;
-    /// Get a slice iterator over the elements (the rows for matrices/the scalars for vectors)
+    /// Returns a slice iterator over the elements of `self` (the rows for matrices/the scalars
+    /// for vectors).
     #[inline(always)]
     fn iter(&self) -> Iter<Self::Type>;
-    /// Get a mutable slice iterator over the elements (the rows for matrices/the scalars for
-    /// vectors)
+    /// Returns a mutable slice iterator over the elements of `self` (the rows for matrices/the
+    /// scalars for vectors).
     #[inline(always)]
     fn iter_mut(&mut self) -> IterMut<Self::Type>;
-    /// Construct a matrix/vector from a single scalar value, setting all elements to that value
+    /// Constructs a matrix/vector from a single scalar value, setting all elements to that value.
     #[inline(always)]
     fn from_value(v: Self::Scalar) -> Self;
 
     /// Fold all the scalar values into a single output given two folding functions,
-    /// The first folding function only applies to the first element of the ScalarArray
+    /// The first folding function only applies to the first element of the ScalarArray.
     #[inline(always)]
     fn fold<T, F0: FnOnce(&Self::Scalar)->T, F: Fn(T, &Self::Scalar)->T>(&self, f0: F0, f: F) -> T;
 }
 
-/// Types that can be fold with another `ScalarArray` of the same dimension into single value
+/// Types that can be fold with another `ScalarArray` of the same dimension into single value.
 pub trait Fold<Rhs: Scalar>: ScalarArray
 where <Self as ScalarArray>::Dim: Dim<<Self::RhsArray as ScalarArray>::Type> {
-    /// The right hand side type
+    /// The right hand side type.
     type RhsArray: ScalarArray<Scalar=Rhs, Dim=<Self as ScalarArray>::Dim>;
 
-    /// Fold two `ScalarArray`s together using a binary function
+    /// Fold two `ScalarArray`s together using a binary function.
     #[inline(always)]
     fn fold_together<O, F0: FnOnce(&<Self as ScalarArray>::Scalar, &Rhs)->O, F: Fn(O, &<Self as ScalarArray>::Scalar, &Rhs)->O>(&self, rhs: &Self::RhsArray, f0: F0, f: F) -> O;
 }
 
-/// Types that can be transformed from into a `ScalarArray` of `<O>`
+/// Types that can be transformed from into a `ScalarArray` with Scalar type `O`.
 pub trait Cast<O: Scalar>: ScalarArray
 where <Self as ScalarArray>::Dim: Dim<<Self::Output as ScalarArray>::Type> {
-    /// The resulting type
+    /// The resulting type.
     type Output: ScalarArray<Scalar=O, Dim=<Self as ScalarArray>::Dim>;
 
-    /// Transform a single `ScalarArray` using a unary function
+    /// Transform a single `ScalarArray` using a unary function.
     #[inline(always)]
     fn unary<F: Fn(&<Self as ScalarArray>::Scalar)->O>(&self, f: F) -> Self::Output;
 
-    /// Transform two binary `ScalarArray`s using a binary function
+    /// Transform two binary `ScalarArray`s using a binary function.
     #[inline(always)]
     fn binary<F: Fn(&<Self as ScalarArray>::Scalar, &<Self as ScalarArray>::Scalar)->O>(&self, rhs: &Self, f: F) -> Self::Output;
 }
 
-/// Types that can be transformed from into a `ScalarArray` of `<T>`
+/// Types that can be transformed from into a `ScalarArray` with Scalar type `O`.
 pub trait CastBinary<Rhs: Scalar, O: Scalar>: ScalarArray
 where <Self as ScalarArray>::Dim: Dim<<Self::RhsArray as ScalarArray>::Type>+Dim<<Self::Output as ScalarArray>::Type> {
-    /// The right hand side type
+    /// The right hand side type.
     type RhsArray: ScalarArray<Scalar=Rhs, Dim=<Self as ScalarArray>::Dim>;
 
-    /// The resulting type
+    /// The resulting type.
     type Output: ScalarArray<Scalar=O, Dim=<Self as ScalarArray>::Dim>;
 
-    /// Transform two binary `ScalarArray`s using a binary function
+    /// Transform two binary `ScalarArray`s using a binary function.
     #[inline(always)]
     fn binary<F: Fn(&<Self as ScalarArray>::Scalar, &Rhs)->O>(&self, rhs: &Self::RhsArray, f: F) -> Self::Output;
 }
 
 
-/// Types that can be component-wise compared using PartialEq
+/// Types that can be component-wise compared using PartialEq.
 pub trait ComponentPartialEq: ScalarArray + Cast<bool>
 where <Self as ScalarArray>::Scalar: PartialEq,
 <Self as ScalarArray>::Dim: Dim<<<Self as Cast<bool>>::Output as ScalarArray>::Type> {
-    /// This method tests for the components of `self` and `rhs` values to be equal
+    /// Tests for the components of `self` and `rhs` values to be equal.
     fn cpt_eq(&self, rhs: &Self) -> <Self as Cast<bool>>::Output {
         Cast::<bool>::binary(self, rhs, PartialEq::eq)
     }
 
-    /// This method tests for the components of `self` and `rhs` values to be unequal
+    /// Tests for the components of `self` and `rhs` values to be unequal.
     fn cpt_ne(&self, rhs: &Self) -> <Self as Cast<bool>>::Output {
         Cast::<bool>::binary(self, rhs, PartialEq::ne)
     }
 }
 
-/// Types that can be component-wise compared using Eq
+/// Types that can be component-wise compared using Eq.
 pub trait ComponentEq : ComponentPartialEq
 where <Self as ScalarArray>::Scalar: Eq,
 <Self as ScalarArray>::Dim: Dim<<<Self as Cast<bool>>::Output as ScalarArray>::Type> {}
 
 
-/// Types that can be component-wise using PartialOrd
+/// Types that can be component-wise using PartialOrd.
 pub trait ComponentPartialOrd: ComponentPartialEq + Cast<Option<Ordering>>
 where <Self as ScalarArray>::Scalar: PartialOrd,
 <Self as ScalarArray>::Dim: Dim<<<Self as Cast<bool>>::Output as ScalarArray>::Type> + Dim<<<Self as Cast<Option<Ordering>>>::Output as ScalarArray>::Type> {
-    /// This method returns an ordering between the components of `self` and `rhs` values if one
-    /// exists
+    /// Returns an ordering between the components of `self` and `rhs` values if one exists.
     fn cpt_partial_cmp(&self, rhs: &Self) -> <Self as Cast<Option<Ordering>>>::Output {
         Cast::<Option<Ordering>>::binary(self, rhs, PartialOrd::partial_cmp)
     }
 
-    /// This method tests less than between the components of `self` and `rhs` values
+    /// Tests less than between the components of `self` and `rhs` values.
     fn cpt_lt(&self, rhs: &Self) -> <Self as Cast<bool>>::Output {
         Cast::<bool>::binary(self, rhs, PartialOrd::lt)
     }
-    /// This method tests less than or equal to between the components of `self` and `rhs` values
+    /// Tests less than or equal to between the components of `self` and `rhs` values.
     fn cpt_le(&self, rhs: &Self) -> <Self as Cast<bool>>::Output {
         Cast::<bool>::binary(self, rhs, PartialOrd::le)
     }
-    /// This method tests greater than between the components of `self` and `rhs` values
+    /// Tests greater than between the components of `self` and `rhs` values.
     fn cpt_gt(&self, rhs: &Self) -> <Self as Cast<bool>>::Output {
         Cast::<bool>::binary(self, rhs, PartialOrd::gt)
     }
-    /// This method tests greater than or equal to between the components of `self` and `rhs`
-    /// values
+    /// Tests greater than or equal to between the components of `self` and `rhs` values.
     fn cpt_ge(&self, rhs: &Self) -> <Self as Cast<bool>>::Output {
         Cast::<bool>::binary(self, rhs, PartialOrd::ge)
     }
 }
 
-/// Types that can be component-wise using Ord
+/// Types that can be component-wise using Ord.
 pub trait ComponentOrd: ComponentEq + ComponentPartialOrd + Cast<Ordering>
 where <Self as ScalarArray>::Scalar: Ord,
 <Self as ScalarArray>::Dim: Dim<<<Self as Cast<bool>>::Output as ScalarArray>::Type> + Dim<<<Self as Cast<Option<Ordering>>>::Output as ScalarArray>::Type> + Dim<<<Self as Cast<Ordering>>::Output as ScalarArray>::Type> {
-    /// This method returns an ordering between the components of `self` and `rhs` values
+    /// Returns an ordering between the components of `self` and `rhs` values.
     fn cpt_cmp(&self, rhs: &Self) -> <Self as Cast<Ordering>>::Output {
         Cast::<Ordering>::binary(self, rhs, Ord::cmp)
     }
 }
 
+/// Types that can be component-wise multiplied.
 pub trait ComponentMul<Rhs: Scalar>: ScalarArray
 where <Self as ScalarArray>::Scalar: Mul<Rhs>,
 <<Self as ScalarArray>::Scalar as Mul<Rhs>>::Output: Scalar,
 <Self as ScalarArray>::Dim: Dim<<Self::RhsArray as ScalarArray>::Type>+Dim<<Self::Output as ScalarArray>::Type> {
-    /// The right hand side type
+    /// The right hand side type.
     type RhsArray: ScalarArray<Scalar=Rhs, Dim=<Self as ScalarArray>::Dim>;
 
-    /// The resulting type
+    /// The resulting type.
     type Output: ScalarArray<Scalar=<<Self as ScalarArray>::Scalar as Mul<Rhs>>::Output, Dim=<Self as ScalarArray>::Dim>;
 
-    /// This method multiplies the components of `self` with those of `rhs`
+    /// Multiplies the components of `self` with those of `rhs`.
     fn cmp_mul(&self, rhs: &Self::RhsArray) -> Self::Output;
 }
 

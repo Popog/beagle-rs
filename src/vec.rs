@@ -1,50 +1,68 @@
 //! An array of Scalars, written `Vec<D, T>` but pronounced 'vector'.
 //!
-//1! Vectors support binary operations between two Vectors or between one Vector and one Scalar.
+//! Vectors support binary operations between two Vectors or between one Vector and one Scalar.
 //! All Arithmetic operators and Bitwise operators are supported, where the two Scalar types
 //! involved support the operation. All operations operate on each component separately.
 //!
 //! Vectors also support Negation and Logical Negation where the underlying Scalar Type supports
 //! it.
+//!
+//! # Examples
+//!
+//! ```
+//! use beagle::vec::{Vec3};
+//!
+//! let v1 = Vec3::from([2f32, 3f32, 5f32]);
+//! let v2 = Vec3::from([7f32, 11f32, 13f32]);
+//! assert_eq!(v1+v2, Vec3::from([9f32, 14f32, 18f32]));
+//! ```
 
 use std::borrow::{Borrow, BorrowMut};
 use std::cmp::Ordering;
 use std::ops::{Index,IndexMut,Range,RangeFrom,RangeTo,RangeFull,Deref,DerefMut};
 use std::slice::{Iter,IterMut};
 
-use num::{Approx,IsNegative,Sqrt};
+use num::{ApproxZero,IsNegative,Sqrt};
 use scalar_array::{Scalar,Dim};
 use scalar_array::{ScalarArray,Fold,Cast,CastBinary};
 use scalar_array::{ComponentPartialEq,ComponentEq,ComponentPartialOrd,ComponentOrd,ComponentMul};
 
-/// Vec is an array of Scalars
+/// An array of Scalars, written `Vec<D, T>` but pronounced 'vector'.
+///
+/// Vectors support binary operations between two Vectors or between one Vector and one Scalar.
+/// All Arithmetic operators and Bitwise operators are supported, where the two Scalar types
+/// involved support the operation. All operations operate on each component separately.
+///
+/// Vectors also support Negation and Logical Negation where the underlying Scalar Type supports
+/// it.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Vec<D, T: Scalar> (D::Output) where D: Dim<T>;
 
-/// Types that represent an array of scalars (a matrix or a vector)
+/// Types that represent an array of scalars.
 impl <T: Scalar, D: Dim<T>> ScalarArray for Vec<D, T> {
-    /// The type of the underlying scalar in the array
+    /// The type of the underlying scalar in the array.
     type Scalar = T;
-    /// The type of a single element of this type (a single row for matrices/a scalar for vectors)
+    /// The type of a single scalar.
     type Type = T;
-    /// The dimension of the scalar array
+    /// The dimension of the scalar array.
     type Dim = D;
 
-    /// Construct a vector from a an array
+    /// Construct a vector from a an array of scalars `v`. Most useful in conjunction
+    /// with `Dim::from_iter`.
     #[inline(always)]
     fn new(v: D::Output) -> Self { Vec(v) }
-    /// Get a slice iterator over the elements (the rows for matrices/the scalars for vectors)
+    /// Returns a slice iterator over the scalars of `self`.
     #[inline(always)]
     fn iter(&self) -> Iter<T> { (self.as_ref() as &[T]).iter() }
-    /// Get a mutable slice iterator over the elements (the scalars)
+    /// Returns a mutable slice iterator over the scalars of `self`.
     #[inline(always)]
     fn iter_mut(&mut self) -> IterMut<T> { (self.as_mut() as &mut [T]).iter_mut() }
-    /// Construct a vector from a single scalar value, setting all elements to that value
+    /// Construct a vector from a single scalar value, setting all elements to that value.
     #[inline(always)]
     fn from_value(v: T) -> Self { Vec(<D as Dim<T>>::from_value(v)) }
 
     /// Fold all the scalar values into a single output given two folding functions,
-    /// The first folding function only applies to the first element of the ScalarArray
+    /// The first folding function only applies to the first element of the ScalarArray.
     #[inline(always)]
     fn fold<U, F0: FnOnce(&Self::Scalar)->U, F: Fn(U, &Self::Scalar)->U>(&self, f0: F0, f: F) -> U {
         let init = f0(&self[0]);
@@ -52,12 +70,12 @@ impl <T: Scalar, D: Dim<T>> ScalarArray for Vec<D, T> {
     }
 }
 
-/// Types that can be transformed from into single value
+/// Types that can be fold with another `ScalarArray` of the same dimension into single value.
 impl <T: Scalar, Rhs: Scalar, D: Dim<T>+Dim<Rhs>> Fold<Rhs> for Vec<D, T> {
-    /// The right hand side type
+    /// The right hand side type.
     type RhsArray = Vec<D, Rhs>;
 
-    /// Fold two `ScalarArray`s together using a binary function
+    /// Fold two `ScalarArray`s together using a binary function.
     #[inline(always)]
     fn fold_together<O, F0: FnOnce(&<Self as ScalarArray>::Scalar, &Rhs)->O, F: Fn(O, &<Self as ScalarArray>::Scalar, &Rhs)->O>(&self, rhs: &Self::RhsArray, f0: F0, f: F) -> O {
         let init = f0(&self[0], &rhs[0]);
@@ -65,32 +83,33 @@ impl <T: Scalar, Rhs: Scalar, D: Dim<T>+Dim<Rhs>> Fold<Rhs> for Vec<D, T> {
     }
 }
 
-/// Types that can be transformed from into a `ScalarArray` of `<O>`
+/// Types that can be transformed from into a `ScalarArray` with Scalar type `O`.
 impl <T: Scalar, O: Scalar, D: Dim<T>+Dim<O>> Cast<O> for Vec<D, T> {
     /// The resulting type
     type Output = Vec<D, O>;
 
-    /// Transform a single `ScalarArray` using a unary function
+    /// Transform a single `ScalarArray` using a unary function.
     #[inline(always)]
     fn unary<F: Fn(&<Self as ScalarArray>::Scalar)->O>(&self, f: F) -> Self::Output {
         Vec::new(<D as Dim<O>>::from_iter(self.iter().map(|s| f(s))))
     }
 
-    /// Transform two binary `ScalarArray`s using a binary function
+    /// Transform two binary `ScalarArray`s using a binary function.
     #[inline(always)]
     fn binary<F: Fn(&<Self as ScalarArray>::Scalar, &<Self as ScalarArray>::Scalar)->O>(&self, rhs: &Self, f: F) -> Self::Output {
         Vec::new(<D as Dim<O>>::from_iter(self.iter().zip(rhs.iter()).map(|(l, r)| f(l, r))))
     }
 }
 
+/// Types that can be transformed from into a `ScalarArray` with Scalar type `O`.
 impl <T: Scalar, Rhs: Scalar, O: Scalar, D: Dim<T>+Dim<Rhs>+Dim<O>> CastBinary<Rhs, O> for Vec<D, T> {
-    /// The right hand side type
+    /// The right hand side type.
     type RhsArray = Vec<D, Rhs>;
 
-    /// The resulting type
+    /// The resulting type.
     type Output = Vec<D, O>;
 
-    /// Transform two binary `ScalarArray`s using a binary function
+    /// Transform two binary `ScalarArray`s using a binary function.
     #[inline(always)]
     fn binary<F: Fn(&<Self as ScalarArray>::Scalar, &Rhs)->O>(&self, rhs: &Self::RhsArray, f: F) -> Self::Output {
         Vec::new(<D as Dim<O>>::from_iter(self.iter().zip(rhs.iter()).map(|(l, r)| f(l, r))))
@@ -98,14 +117,14 @@ impl <T: Scalar, Rhs: Scalar, O: Scalar, D: Dim<T>+Dim<Rhs>+Dim<O>> CastBinary<R
 }
 
 impl <T: Scalar, D: Dim<T>> Vec<D, T> {
-    /// returns the sum of all the elements of `self`
+    /// Returns the sum of all the elements of `self`.
     #[inline(always)]
     pub fn sum(&self) -> T
     where T: Add<Output=T> {
         self.fold(|&i| i, |sum, &i| sum + i)
     }
 
-    /// returns the dot product of `self` and `rhs`
+    /// Returns the dot product of `self` and `rhs`.
     #[inline(always)]
     pub fn dot<Rhs: Scalar>(&self, rhs: &Vec<D, Rhs>) -> <T as Mul<Rhs>>::Output
     where D: Dim<Rhs>,
@@ -114,7 +133,7 @@ impl <T: Scalar, D: Dim<T>> Vec<D, T> {
         Fold::<Rhs>::fold_together(self, rhs, |&l, &r| l*r, |acc, &l, &r| acc + l*r)
     }
 
-    /// returns the length squared of `self`
+    /// Returns the length squared of `self`.
     #[inline(always)]
     pub fn length2(&self) -> <T as Mul>::Output
     where T: Mul,
@@ -122,7 +141,7 @@ impl <T: Scalar, D: Dim<T>> Vec<D, T> {
         self.dot(self)
     }
 
-    /// returns the length of `self`
+    /// Returns the length of `self`.
     #[inline(always)]
     pub fn length(&self) -> <T as Mul>::Output
     where T: Mul,
@@ -130,7 +149,7 @@ impl <T: Scalar, D: Dim<T>> Vec<D, T> {
         self.length2().sqrt()
     }
 
-    /// returns the normalized version of `self`
+    /// Returns the normalized version of `self`.
     #[inline(always)]
     pub fn normalize<O:Scalar>(&self) -> Vec<D, O>
     where O: Scalar+Add<Output=O> + Sqrt,
@@ -139,9 +158,9 @@ impl <T: Scalar, D: Dim<T>> Vec<D, T> {
         self / self.length()
     }
 
-    /// returns `epsilon.is_zero(cos(θ))`, where `θ` = the angle between `self` and `rhs`.
+    /// Returns `cos²(θ) < ε²`, where `θ` = the angle between `self` and `rhs`.
     #[inline]
-    pub fn is_perpendicular<Rhs: Scalar+Mul, O:Copy>(&self, rhs: &Vec<D, Rhs>, epsilon_squared: &Approx<O>) -> bool
+    pub fn is_perpendicular<Rhs: Scalar+Mul, O:Copy>(&self, rhs: &Vec<D, Rhs>, epsilon_squared: &ApproxZero<O>) -> bool
     where D: Dim<Rhs>,
     T: Mul<Output=O>+Mul<Rhs, Output=O>,
     Rhs: Mul<Output=O>,
@@ -150,16 +169,16 @@ impl <T: Scalar, D: Dim<T>> Vec<D, T> {
         // We're looking to return abs(cos(θ)) <= ε
         // Proof:
         // ∵                 a·b  =  |a|*|b|*cos(θ)
-        // ∵            |cos(θ)| <=  ε
-        //      |a|*|b|*|cos(θ)| <=  |a|*|b|*ε
-        //   (|a|*|b|*|cos(θ)|)² <=  (|a|*|b|*ε)²
+        // ∵            cos²(θ)  <=  ε²
+        //     |a|²*|b|²*cos²(θ) <=  |a|²*|b|²*ε²
+        //   (|a|*|b|*|cos(θ)|)² <=  |a|²*|b|²*ε²
         //                (a·b)² <=  |a|²*|b|²*ε²
         // ∴  (a·b)² / |a|²*|b|² <=  ε²
         let a_dot_b = a.dot(b);
-        epsilon_squared.approx_zero(&(a_dot_b * a_dot_b), &(a.length2() * b.length2()))
+        epsilon_squared.approx_zero_ratio(&(a_dot_b * a_dot_b), &(a.length2() * b.length2()))
     }
 
-    /// returns the distance squared between `self` and `rhs`
+    /// Returns the distance squared between `self` and `rhs`.
     #[inline]
     pub fn distance2<Rhs: Scalar, O>(&self, rhs: &Vec<D, Rhs>) -> O
     where D: Dim<Rhs>,
@@ -168,7 +187,7 @@ impl <T: Scalar, D: Dim<T>> Vec<D, T> {
         Fold::<Rhs>::fold_together(self, rhs, |&l, &r| (l-r)*(l-r), |acc, &l, &r| acc + (l-r)*(l-r))
     }
 
-    /// returns the distance between `self` and `rhs`
+    /// Returns the distance between `self` and `rhs`.
     #[inline]
     pub fn distance<Rhs: Scalar, O>(&self, rhs: &Vec<D, Rhs>) -> O
     where D: Dim<Rhs>,
@@ -177,7 +196,7 @@ impl <T: Scalar, D: Dim<T>> Vec<D, T> {
         self.distance2(rhs).sqrt()
     }
 
-    /// returns `self` if `nref.dot(i)` is negative, else `-self`
+    /// Returns `self` if `nref.dot(i)` is negative, else `-self`.
     pub fn faceforward<U: Scalar, V:Scalar>(&self, i: &Vec<D, U>, nref: Vec<D, V>) -> Vec<D, T>
     where T: Neg<Output=T>,
     D: Dim<U>+Dim<V>,
@@ -186,7 +205,7 @@ impl <T: Scalar, D: Dim<T>> Vec<D, T> {
         if nref.dot(i).is_negative() { *self } else { -self }
     }
 
-    /// reflection direction. `self - 2 * dot(self,rhs) * rhs`
+    /// Relfects `self` against `rhs` as `self - 2 * dot(self,rhs) * rhs`.
     pub fn reflect<Rhs: Scalar, O: Scalar>(&self, rhs: &Vec<D, Rhs>) -> Vec<D, O>
     where D: Dim<Rhs>+Dim<O>,
     T: Mul<Rhs, Output=O>+Sub<O, Output=O>,
@@ -203,13 +222,13 @@ impl <T: Scalar, D: Dim<T>> Vec<D, T> {
 }
 
 
-/// returns the cross product of `self` and `rhs`
+/// Returns the cross product of `self` and `rhs`.
 pub fn cross_product<Lhs: Scalar, Rhs: Scalar, O: Scalar>(lhs: &Vec3<Lhs>, rhs: &Vec3<Rhs>) -> Vec3<O>
 where Lhs: Mul<Rhs, Output=O>,
 O: Sub<Output=O> { lhs.cross_product(rhs) }
 
 impl<T: Scalar> Vec3<T> {
-    /// returns the cross product of `self` and `rhs`
+    /// Returns the cross product of `self` and `rhs`
     pub fn cross_product<Rhs: Scalar, O: Scalar>(&self, rhs: &Vec3<Rhs>) -> Vec3<O>
     where T: Mul<Rhs, Output=O>,
     O: Sub<Output=O> {
@@ -308,16 +327,18 @@ impl <T: Scalar+Eq, D: Dim<T>+Dim<bool>> ComponentEq for Vec<D, T> {}
 impl <T: Scalar+PartialOrd, D: Dim<T>+Dim<bool>+Dim<Option<Ordering>>> ComponentPartialOrd for Vec<D, T> {}
 impl <T: Scalar+Ord, D: Dim<T>+Dim<bool>+Dim<Option<Ordering>>+Dim<Ordering>> ComponentOrd for Vec<D, T> {}
 
+/// Types that can be component-wise multiplied.
 impl <T: Scalar, Rhs: Scalar, D: Dim<T>+Dim<Rhs>> ComponentMul<Rhs> for Vec<D, T>
 where T: Mul<Rhs>,
 <T as Mul<Rhs>>::Output: Scalar,
 D: Dim<<T as Mul<Rhs>>::Output> {
-    /// The right hand side type
+    /// The right hand side type.
     type RhsArray = Vec<D, Rhs>;
 
-    /// The resulting type
+    /// The resulting type.
     type Output = Vec<D, <T as Mul<Rhs>>::Output>;
-
+    
+    /// Multiplies the components of `self` and `rhs`.
     fn cmp_mul(&self, rhs: &Self::RhsArray) -> Self::Output {
         self * rhs
     }
