@@ -87,6 +87,13 @@ impl <T: Scalar, C: Dim<T>, R: Dim<Vec<C, T>>> ScalarArray for Mat<R, C, T> {
         let init = self[0].fold(f0, &f);
         self[1..].iter().fold(init, |acc, row| row.fold(|v| f(acc, v), &f))
     }
+
+    /// Map all the scalar values, keeping the same underlying type.
+    #[inline(always)]
+    fn map<F: Fn(Self::Scalar)->Self::Scalar>(mut self, f: F) -> Self {
+        for v in self.iter_mut() { *v = v.map(&f); }
+        self
+    }
 }
 
 impl <T: Scalar, C: Dim<T>, R: Dim<Vec<C, T>>> Mat<R, C, T> {

@@ -7,14 +7,41 @@ use std::cmp::Ordering;
 pub trait Sqrt {
     /// Takes the square root of a number.
     ///
-    /// Returns NaN if self is a negative number.
-    fn sqrt(&self) -> Self;
+    /// Returns NaN if `self` is a negative number.
+    fn sqrt(self) -> Self;
+
+    /// Returns the inverse of the square root of a number. i.e. the value `1/√x`.
+    ///
+    /// Returns NaN if `self` is a negative number.
+    fn inversesqrt(self) -> Self;
 }
 
-impl Sqrt for f32 {  fn sqrt(&self) -> Self { f32::sqrt(*self) }  }
-impl Sqrt for f64 {  fn sqrt(&self) -> Self { f64::sqrt(*self) }  }
+/// Types that can be square-rooted.
+impl Sqrt for f32 {
+    /// Takes the square root of a number.
+    ///
+    /// Returns NaN if self is a negative number.
+    fn sqrt(self) -> Self { f32::sqrt(self) }
 
-/// Types that can be negative.
+    /// Returns the inverse of the square root of a number. i.e. the value `1/√x`.
+    ///
+    /// Returns NaN if `self` is a negative number.
+    fn inversesqrt(self) -> Self { self.sqrt().recip() }
+}
+/// Types that can be square-rooted.
+impl Sqrt for f64 {
+    /// Takes the square root of a number.
+    ///
+    /// Returns NaN if self is a negative number.
+    fn sqrt(self) -> Self { f64::sqrt(self) }
+
+    /// Returns the inverse of the square root of a number. i.e. the value `1/√x`.
+    ///
+    /// Returns NaN if `self` is a negative number.
+    fn inversesqrt(self) -> Self { self.sqrt().recip() }
+}
+
+/// Types that can be sign functions.
 pub trait Sign {
     /// The resulting type
     type Output;

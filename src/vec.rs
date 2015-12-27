@@ -68,6 +68,13 @@ impl <T: Scalar, D: Dim<T>> ScalarArray for Vec<D, T> {
         let init = f0(&self[0]);
         self[1..].iter().fold(init, f)
     }
+
+    /// Map all the scalar values, keeping the same underlying type.
+    #[inline(always)]
+    fn map<F: Fn(Self::Scalar)->Self::Scalar>(mut self, f: F) -> Self {
+        for v in self.iter_mut() { *v = f(*v); }
+        self
+    }
 }
 
 /// Types that can be fold with another `ScalarArray` of the same dimension into single value.

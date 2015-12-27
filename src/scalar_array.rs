@@ -8,6 +8,7 @@ use std::ops::{Mul};
 use std::slice::{Iter,IterMut};
 
 use angle;
+use num::Sqrt;
 
 /// Types that can be held in a Matrix/Vector.
 pub trait Scalar: Copy {}
@@ -58,6 +59,10 @@ pub trait ScalarArray {
     /// The first folding function only applies to the first element of the ScalarArray.
     #[inline(always)]
     fn fold<T, F0: FnOnce(&Self::Scalar)->T, F: Fn(T, &Self::Scalar)->T>(&self, f0: F0, f: F) -> T;
+
+    /// Map all the scalar values, keeping the same underlying type.
+    #[inline(always)]
+    fn map<F: Fn(Self::Scalar)->Self::Scalar>(self, f: F) -> Self;
 }
 
 /// Types that can be fold with another `ScalarArray` of the same dimension into single value.
@@ -174,6 +179,21 @@ where <Self as ScalarArray>::Scalar: Mul<Rhs>,
     fn cmp_mul(&self, rhs: &Self::RhsArray) -> Self::Output;
 }
 
+
+/// Types that can be square-rooted.
+impl <S: ScalarArray> Sqrt for S
+where <S as ScalarArray>::Scalar: Sqrt {
+    /// Takes the square root of a number.
+    ///
+    /// Returns NaN if self is a negative number.
+    fn sqrt(self) -> Self { self.map(Sqrt::sqrt) }
+
+    /// Returns the inverse of the square root of a number. i.e. the value `1/√x`.
+    ///
+    /// Returns NaN if `self` is a negative number.
+    fn inversesqrt(self) -> Self { self.map(Sqrt::inversesqrt) }
+}
+
 // TODO: hyperbolic angle functions
 // hyperbolic sine
 //  Tf  sinh(Tf x)
@@ -199,10 +219,6 @@ where <Self as ScalarArray>::Scalar: Mul<Rhs>,
 //  Tf  exp2(Tf x)
 // log2
 //  Tf  log2(Tf x)
-// square root
-//  Tfd sqrt(Tfd x)
-// inverse square root
-//  Tfd inversesqrt(Tfd x)
 
 // TODO: common functions
 // Returns absolute value:
