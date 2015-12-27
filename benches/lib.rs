@@ -7,6 +7,7 @@ use self::test::Bencher;
 
 use beagle::vec::Vec3;
 use beagle::mat::Mat3x3;
+use beagle::vec::{faceforward, distance2};
 
 #[bench]
 fn bench_add_mat3s(b: &mut Bencher) {
@@ -68,6 +69,34 @@ fn bench_add_f64(b: &mut Bencher) {
         let n = test::black_box(10_000);
         for _ in 0..n {
             a = a+a;
+        }
+        a
+    });
+}
+
+#[bench]
+fn bench_faceforward(b: &mut Bencher) {
+    b.iter(|| {
+        let mut a: Vec3<f64> = Vec3::from([1.0, 2.0, 3.0]);
+        let b: Vec3<f64> = Vec3::from([1.0, 2.0, 3.0]);
+
+        let n = test::black_box(10_000);
+        for _ in 0..n {
+            a = faceforward(a, &a, &b);
+        }
+        a
+    });
+}
+
+#[bench]
+fn bench_distance2(b: &mut Bencher) {
+    b.iter(|| {
+        let mut a: Vec3<f64> = Vec3::from([1.0, 2.0, 5.0]);
+        let b: Vec3<f64> = Vec3::from([1.0, 2.0, 3.0]);
+
+        let n = test::black_box(10_000);
+        for _ in 0..n {
+            a = a * distance2(a, &b);
         }
         a
     });

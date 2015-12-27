@@ -38,7 +38,7 @@ use std::slice::{Iter,IterMut};
 use scalar_array::{Scalar,Dim};
 use scalar_array::{ScalarArray,Fold,Cast,CastBinary};
 use scalar_array::{ComponentPartialEq,ComponentEq,ComponentPartialOrd,ComponentOrd,ComponentMul};
-use vec::Vec;
+use vec::{Vec, Dot};
 
 /// An row-major array of vectors, written `Mat<R, C, T>` but pronounced 'matrix'.
 ///

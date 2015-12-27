@@ -22,7 +22,7 @@ use std::cmp::Ordering;
 use std::ops::{Index,IndexMut,Range,RangeFrom,RangeTo,RangeFull,Deref,DerefMut};
 use std::slice::{Iter,IterMut};
 
-use num::{ApproxZero,IsNegative,Sqrt};
+use num::{ApproxZero,Sign,Sqrt};
 use scalar_array::{Scalar,Dim};
 use scalar_array::{ScalarArray,Fold,Cast,CastBinary};
 use scalar_array::{ComponentPartialEq,ComponentEq,ComponentPartialOrd,ComponentOrd,ComponentMul};
@@ -124,97 +124,6 @@ impl <T: Scalar, D: Dim<T>> Vec<D, T> {
         self.fold(|&i| i, |sum, &i| sum + i)
     }
 
-    /// Returns the dot product of `self` and `rhs`.
-    #[inline(always)]
-    pub fn dot<Rhs: Scalar>(&self, rhs: &Vec<D, Rhs>) -> <T as Mul<Rhs>>::Output
-    where D: Dim<Rhs>,
-    T: Mul<Rhs>,
-    <T as Mul<Rhs>>::Output: Add<Output=<T as Mul<Rhs>>::Output> {
-        Fold::<Rhs>::fold_together(self, rhs, |&l, &r| l*r, |acc, &l, &r| acc + l*r)
-    }
-
-    /// Returns the length squared of `self`.
-    #[inline(always)]
-    pub fn length2(&self) -> <T as Mul>::Output
-    where T: Mul,
-    <T as Mul>::Output: Add<Output=<T as Mul>::Output> {
-        self.dot(self)
-    }
-
-    /// Returns the length of `self`.
-    #[inline(always)]
-    pub fn length(&self) -> <T as Mul>::Output
-    where T: Mul,
-    <T as Mul>::Output: Sqrt+Add<Output=<T as Mul>::Output> {
-        self.length2().sqrt()
-    }
-
-    /// Returns the normalized version of `self`.
-    #[inline(always)]
-    pub fn normalize<O:Scalar+Sqrt+Add<Output=O>>(&self) -> Vec<D, O>
-    where T: Mul<Output=O>+Div<O, Output=O>,
-    D: Dim<O> {
-        self / self.length()
-    }
-
-    /// Returns `cos²(θ) < ε²`, where `θ` = the angle between `self` and `rhs`.
-    #[inline]
-    pub fn is_perpendicular<Rhs: Scalar+Mul, O:Copy>(&self, rhs: &Vec<D, Rhs>, epsilon_squared: &ApproxZero<O>) -> bool
-    where D: Dim<Rhs>,
-    T: Mul<Output=O>+Mul<Rhs, Output=O>,
-    Rhs: Mul<Output=O>,
-    O: Add<Output=O>+Mul<Output=O>, {
-        let (a, b) = (self, rhs);
-        // We're looking to return abs(cos(θ)) <= ε
-        // Proof:
-        // ∵                 a·b  =  |a|*|b|*cos(θ)
-        // ∵            cos²(θ)  <=  ε²
-        //     |a|²*|b|²*cos²(θ) <=  |a|²*|b|²*ε²
-        //   (|a|*|b|*|cos(θ)|)² <=  |a|²*|b|²*ε²
-        //                (a·b)² <=  |a|²*|b|²*ε²
-        // ∴  (a·b)² / |a|²*|b|² <=  ε²
-        let a_dot_b = a.dot(b);
-        epsilon_squared.approx_zero_ratio(&(a_dot_b * a_dot_b), &(a.length2() * b.length2()))
-    }
-
-    /// Returns the distance squared between `self` and `rhs`.
-    #[inline]
-    pub fn distance2<Rhs: Scalar, O>(&self, rhs: &Vec<D, Rhs>) -> O
-    where D: Dim<Rhs>,
-    T: Sub<Rhs, Output=O>,
-    O: Mul<Output=O> + Add<Output=O> {
-        Fold::<Rhs>::fold_together(self, rhs, |&l, &r| (l-r)*(l-r), |acc, &l, &r| acc + (l-r)*(l-r))
-    }
-
-    /// Returns the distance between `self` and `rhs`.
-    #[inline]
-    pub fn distance<Rhs: Scalar, O>(&self, rhs: &Vec<D, Rhs>) -> O
-    where D: Dim<Rhs>,
-    T: Sub<Rhs, Output=O>,
-    O: Mul<Output=O> + Add<Output=O> + Sqrt {
-        self.distance2(rhs).sqrt()
-    }
-
-    /// Returns `self` if `nref.dot(i)` is negative, else `-self`.
-    pub fn faceforward<U: Scalar, V:Scalar>(&self, i: &Vec<D, U>, nref: Vec<D, V>) -> Vec<D, T>
-    where T: Neg<Output=T>,
-    D: Dim<U>+Dim<V>,
-    V: Mul<U>,
-    <V as Mul<U>>::Output: IsNegative+Add<Output=<V as Mul<U>>::Output> {
-        if nref.dot(i).is_negative() { *self } else { -self }
-    }
-
-    /// Reflects `self` against `rhs` as `self - 2 * dot(self,rhs) * rhs`.
-    pub fn reflect<Rhs: Scalar, O: Scalar>(&self, rhs: &Vec<D, Rhs>) -> Vec<D, O>
-    where D: Dim<Rhs>+Dim<O>,
-    T: Mul<Rhs, Output=O>+Sub<O, Output=O>,
-    O: Add<Output=O>+Mul<Rhs, Output=O> {
-        let l_dot_r = self.dot(rhs);
-        let two_ldr = l_dot_r+l_dot_r;
-
-        CastBinary::<Rhs, O>::binary(self, rhs, |&l, &r| l - two_ldr*r)
-    }
-
     // TODO: geometric functions
     // refraction vector
     //  Tfd  refract(Tfd I, Tfd N, float eta)
@@ -225,43 +134,136 @@ impl <T: Scalar, D: Dim<T>> Vec<D, T> {
 pub fn sum<T: Scalar, D: Dim<T>>(v: &Vec<D, T>) -> T
 where T: Add<Output=T> { v.sum() }
 
+/// Types that can be Dot producted
+pub trait Dot<Rhs=Self> {
+    /// The resulting type.
+    type Output: Scalar;
+    /// Returns the dot product of `self` and `rhs`.
+    #[inline(always)]
+    fn dot(self, rhs: Rhs) -> Self::Output;
+}
+
+impl <Rhs: Scalar, T: Scalar+Mul<Rhs>, D: Dim<T>+Dim<Rhs>> Dot<Vec<D, Rhs>> for Vec<D, T>
+where <T as Mul<Rhs>>::Output: Scalar+Add<Output=<T as Mul<Rhs>>::Output> {
+    /// The resulting type.
+    type Output = <T as Mul<Rhs>>::Output;
+    /// Returns the dot product of `self` and `rhs`.
+    #[inline(always)]
+    fn dot(self, rhs: Vec<D, Rhs>) -> Self::Output {
+        Fold::<Rhs>::fold_together(&self, &rhs, |&l, &r| l*r, |acc, &l, &r| acc + l*r)
+    }
+}
+
+impl <'l, Rhs: Scalar, T: Scalar+Mul<Rhs>, D: Dim<T>+Dim<Rhs>> Dot<Vec<D, Rhs>> for &'l Vec<D, T>
+where <T as Mul<Rhs>>::Output: Scalar+Add<Output=<T as Mul<Rhs>>::Output> {
+    /// The resulting type.
+    type Output = <T as Mul<Rhs>>::Output;
+    /// Returns the dot product of `self` and `rhs`.
+    #[inline(always)]
+    fn dot(self, rhs: Vec<D, Rhs>) -> Self::Output {
+        Fold::<Rhs>::fold_together(self, &rhs, |&l, &r| l*r, |acc, &l, &r| acc + l*r)
+    }
+}
+
+impl <'r, Rhs: Scalar, T: Scalar+Mul<Rhs>, D: Dim<T>+Dim<Rhs>> Dot<&'r Vec<D, Rhs>> for Vec<D, T>
+where <T as Mul<Rhs>>::Output: Scalar+Add<Output=<T as Mul<Rhs>>::Output> {
+    /// The resulting type.
+    type Output = <T as Mul<Rhs>>::Output;
+    /// Returns the dot product of `self` and `rhs`.
+    #[inline(always)]
+    fn dot(self, rhs: &'r Vec<D, Rhs>) -> Self::Output {
+        Fold::<Rhs>::fold_together(&self, rhs, |&l, &r| l*r, |acc, &l, &r| acc + l*r)
+    }
+}
+
+impl <'l, 'r, Rhs: Scalar, T: Scalar+Mul<Rhs>, D: Dim<T>+Dim<Rhs>> Dot<&'r Vec<D, Rhs>> for &'l Vec<D, T>
+where <T as Mul<Rhs>>::Output: Scalar+Add<Output=<T as Mul<Rhs>>::Output> {
+    /// The resulting type.
+    type Output = <T as Mul<Rhs>>::Output;
+    /// Returns the dot product of `self` and `rhs`.
+    #[inline(always)]
+    fn dot(self, rhs: &'r Vec<D, Rhs>) -> Self::Output {
+        Fold::<Rhs>::fold_together(self, rhs, |&l, &r| l*r, |acc, &l, &r| acc + l*r)
+    }
+}
+
 /// Returns the dot product of `lhs` and `rhs`.
 #[inline(always)]
-pub fn dot<Rhs: Scalar, T: Scalar+Mul<Rhs>, D: Dim<T>+Dim<Rhs>>(lhs: &Vec<D, T>, rhs: &Vec<D, Rhs>) -> <T as Mul<Rhs>>::Output
-where <T as Mul<Rhs>>::Output: Add<Output=<T as Mul<Rhs>>::Output> { lhs.dot(rhs) }
+pub fn dot<Rhs, Lhs: Dot<Rhs>>(lhs:Lhs, rhs: Rhs) -> <Lhs as Dot<Rhs>>::Output {
+    lhs.dot(rhs)
+}
 
 /// Returns the length squared of `v`.
 #[inline(always)]
-pub fn length2<T: Scalar+Mul, D: Dim<T>>(v: &Vec<D, T>) -> <T as Mul>::Output
-where <T as Mul>::Output: Add<Output=<T as Mul>::Output> { v.length2() }
+pub fn length2<V: Copy+Dot>(v: V) -> <V as Dot>::Output {
+    v.dot(v)
+}
 
 /// Returns the length of `v`.
 #[inline(always)]
-pub fn length<T: Scalar+Mul, D: Dim<T>>(v: &Vec<D, T>) -> <T as Mul>::Output
-where <T as Mul>::Output: Sqrt+Add<Output=<T as Mul>::Output> { v.length() }
+pub fn length<V: Copy+Dot>(v: V) -> <V as Dot>::Output
+where <V as Dot>::Output: Sqrt {
+    length2(v).sqrt()
+}
 
 /// Returns the normalized version of `v`.
 #[inline(always)]
-pub fn normalize<O:Scalar+Sqrt+Add<Output=O>, T: Scalar+Mul<Output=O>+Div<O, Output=O>, D: Dim<T>+Dim<O>>(v: &Vec<D, T>) -> Vec<D, O> { v.normalize() }
+pub fn normalize<V: Copy+Dot>(v: V) -> <V as Div<<V as Dot>::Output>>::Output
+where <V as Dot>::Output: Sqrt,
+V: Div<<V as Dot>::Output> {
+    v / length(v)
+}
+
+/// Returns `n` if `nref.dot(i)` is negative, else `-n`.
+pub fn faceforward<N: Neg<Output=N>, I, NRef: Dot<I>>(n: N, i: I, nref: NRef) -> N
+where <NRef as Dot<I>>::Output: Sign<Output=bool>,
+N: Mul<<NRef as Dot<I>>::Output, Output=N> {
+    if nref.dot(i).is_negative() { n } else { -n }
+}
+
+/// Returns `cos²(θ) < ε²`, where `θ` = the angle between `a` and `b`.
+#[inline]
+pub fn is_perpendicular<O:Scalar, B: Copy+Dot, A: Copy+Dot+Dot<B>>(a: A, b: B, epsilon_squared: &ApproxZero<O>) -> bool
+where <A as Dot<B>>::Output: Mul<Output=O>,
+<A as Dot>::Output: Mul<<B as Dot>::Output, Output=O> {
+    // We're looking to return abs(cos(θ)) <= ε
+    // Proof:
+    // ∵                 a·b  =  |a|*|b|*cos(θ)
+    // ∵            cos²(θ)  <=  ε²
+    //     |a|²*|b|²*cos²(θ) <=  |a|²*|b|²*ε²
+    //   (|a|*|b|*|cos(θ)|)² <=  |a|²*|b|²*ε²
+    //                (a·b)² <=  |a|²*|b|²*ε²
+    // ∴  (a·b)² / |a|²*|b|² <=  ε²
+    let a_dot_b = a.dot(b);
+    epsilon_squared.approx_zero_ratio(a_dot_b * a_dot_b, length2(a) * length2(b))
+}
+
+/// Reflects `i` against `n` as `i - n * dot(i,n) * 2`.
+pub fn reflect<N: Copy, I: Copy+Dot<N>>(i: I, n: N) -> <I as Sub<<N as Mul<<<I as Dot<N>>::Output as Add>::Output>>::Output>>::Output
+where <I as Dot<N>>::Output: Add,
+N: Mul<<<I as Dot<N>>::Output as Add>::Output>,
+I: Sub<<N as Mul<<<I as Dot<N>>::Output as Add>::Output>>::Output> {
+    let i_n = i.dot(n);
+    i - n * (i_n+i_n)
+}
 
 /// Returns the distance squared between `lhs` and `rhs`.
 #[inline]
-pub fn distance2<O: Mul<Output=O> + Add<Output=O>, Rhs: Scalar, T: Scalar+Sub<Rhs, Output=O>, D: Dim<T>+Dim<Rhs>>(lhs: &Vec<D, T>, rhs: &Vec<D, Rhs>) -> O { lhs.distance2(rhs) }
+pub fn distance2<Rhs, Lhs>(lhs: Lhs, rhs: Rhs) -> <<Lhs as Sub<Rhs>>::Output as Dot>::Output
+where Lhs: Sub<Rhs>,
+<Lhs as Sub<Rhs>>::Output: Copy+Dot {
+    length2(lhs - rhs)
+}
 
 /// Returns the distance between `lhs` and `rhs`.
 #[inline]
-pub fn distance<O: Sqrt + Mul<Output=O> + Add<Output=O>, Rhs: Scalar, T: Scalar+Sub<Rhs, Output=O>, D: Dim<T>+Dim<Rhs>>(lhs: &Vec<D, T>, rhs: &Vec<D, Rhs>) -> O { lhs.distance(rhs) }
-
-/// Returns `n` if `nref.dot(i)` is negative, else `-n`.
-pub fn faceforward<T: Scalar+Neg<Output=T>, U: Scalar, V:Scalar+Mul<U>, D: Dim<T>+Dim<U>+Dim<V>>(n: &Vec<D, T>, i: &Vec<D, U>, nref: Vec<D, V>) -> Vec<D, T>
-where <V as Mul<U>>::Output: IsNegative+Add<Output=<V as Mul<U>>::Output> {
-    n.faceforward(i, nref)
+pub fn distance<Rhs, Lhs>(lhs: Lhs, rhs: Rhs) -> <<Lhs as Sub<Rhs>>::Output as Dot>::Output
+where Lhs: Sub<Rhs>,
+<Lhs as Sub<Rhs>>::Output: Copy+Dot,
+<<Lhs as Sub<Rhs>>::Output as Dot>::Output: Sqrt {
+    length(lhs - rhs)
 }
 
-/// Reflects `lhs` against `rhs` as `lhs - 2 * dot(lhs,rhs) * rhs`.
-pub fn reflect<Rhs: Scalar, O: Scalar + Add<Output=O>+Mul<Rhs, Output=O>, T: Scalar+Mul<Rhs, Output=O>+Sub<O, Output=O>, D: Dim<T>+Dim<Rhs>+Dim<O>>(lhs: &Vec<D, T>, rhs: &Vec<D, Rhs>) -> Vec<D, O> {
-    lhs.reflect(rhs)
-}
 
 impl<T: Scalar> Vec3<T> {
     /// Returns the cross product of `self` and `rhs`
