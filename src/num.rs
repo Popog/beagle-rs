@@ -166,18 +166,13 @@ impl Sign for f64 {
     fn is_sign_positive(&self) -> Self::Output { f64::is_sign_positive(*self) }
 
     /// Returns a number that represents the sign of self.
+    /// NaN if `self` is NaN
     /// One if the `self.is_sign_positive()`
     /// Negative one if `self.is_sign_negative()`
-    fn signum(self) -> Self {
-        use std::mem;
-        let u: u64 = unsafe { mem::transmute(self) } ;
-        let u = u & (1 << 63); // Mask to just the signed bit
-        let u = u | 0x3ff0000000000000; // Convert it to a 1
-        unsafe { mem::transmute(u) }
-        //f64::signum(self)
-    }
+    fn signum(self) -> Self { f64::signum(self) }
 
     /// Returns a number that represents the sign of self.
+    /// NaN if `self` is NaN
     /// One if the `self.is_positive()`
     /// Negative one if `self.is_negative()`
     /// else Zero
@@ -185,7 +180,7 @@ impl Sign for f64 {
         match self.partial_cmp(&0f64) {
             Some(Ordering::Less) => -1f64,
             Some(Ordering::Greater) => 1f64,
-            _ => 0f64
+            _ => self,
         }
     }
 }
