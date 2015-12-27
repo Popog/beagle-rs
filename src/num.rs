@@ -41,6 +41,54 @@ impl Sqrt for f64 {
     fn inversesqrt(self) -> Self { self.sqrt().recip() }
 }
 
+// Types that implment hyperbolic angle functions
+pub trait Hyperbolic {
+    // Hyperbolic sine function.
+    fn sinh(self) -> Self;
+    // Hyperbolic cosine function.
+    fn cosh(self) -> Self;
+    // Hyperbolic tangent function.
+    fn tanh(self) -> Self;
+    // Hyperbolic sine function.
+    fn asinh(self) -> Self;
+    // Hyperbolic cosine function.
+    fn acosh(self) -> Self;
+    // Hyperbolic tangent function.
+    fn atanh(self) -> Self;
+}
+
+// Types that implment hyperbolic angle functions
+impl Hyperbolic for f32 {
+    // Hyperbolic sine function.
+    fn sinh(self) -> Self { f32::sinh(self) }
+    // Hyperbolic cosine function.
+    fn cosh(self) -> Self { f32::cosh(self) }
+    // Hyperbolic tangent function.
+    fn tanh(self) -> Self { f32::tanh(self) }
+    // Hyperbolic sine function.
+    fn asinh(self) -> Self { f32::asinh(self) }
+    // Hyperbolic cosine function.
+    fn acosh(self) -> Self { f32::acosh(self) }
+    // Hyperbolic tangent function.
+    fn atanh(self) -> Self { f32::atanh(self) }
+}
+
+// Types that implment hyperbolic angle functions
+impl Hyperbolic for f64 {
+    // Hyperbolic sine function.
+    fn sinh(self) -> Self { f64::sinh(self) }
+    // Hyperbolic cosine function.
+    fn cosh(self) -> Self { f64::cosh(self) }
+    // Hyperbolic tangent function.
+    fn tanh(self) -> Self { f64::tanh(self) }
+    // Hyperbolic sine function.
+    fn asinh(self) -> Self { f64::asinh(self) }
+    // Hyperbolic cosine function.
+    fn acosh(self) -> Self { f64::acosh(self) }
+    // Hyperbolic tangent function.
+    fn atanh(self) -> Self { f64::atanh(self) }
+}
+
 /// Types that can be sign functions.
 pub trait Sign {
     /// The resulting type

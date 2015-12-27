@@ -8,7 +8,7 @@ use std::ops::{Mul};
 use std::slice::{Iter,IterMut};
 
 use angle;
-use num::Sqrt;
+use num::{Hyperbolic, Sqrt};
 
 /// Types that can be held in a Matrix/Vector.
 pub trait Scalar: Copy {}
@@ -194,19 +194,22 @@ where <S as ScalarArray>::Scalar: Sqrt {
     fn inversesqrt(self) -> Self { self.map(Sqrt::inversesqrt) }
 }
 
-// TODO: hyperbolic angle functions
-// hyperbolic sine
-//  Tf  sinh(Tf x)
-// hyperbolic cosine
-//  Tf  cosh(Tf x)
-// hyperbolic tangent
-//  Tf  tanh(Tf x)
-// hyperbolic sine
-//  Tf  asinh(Tf x)
-// hyperbolic cosine
-//  Tf  acosh(Tf x)
-// hyperbolic tangent
-//  Tf  atanh(Tf x)
+// Types that implment hyperbolic angle functions
+impl <S: ScalarArray> Hyperbolic for S
+where <S as ScalarArray>::Scalar: Hyperbolic {
+    // Hyperbolic sine function.
+    fn sinh(self) -> Self { self.map(Hyperbolic::sinh) }
+    // Hyperbolic cosine function.
+    fn cosh(self) -> Self { self.map(Hyperbolic::cosh) }
+    // Hyperbolic tangent function.
+    fn tanh(self) -> Self { self.map(Hyperbolic::tanh) }
+    // Hyperbolic sine function.
+    fn asinh(self) -> Self { self.map(Hyperbolic::asinh) }
+    // Hyperbolic cosine function.
+    fn acosh(self) -> Self { self.map(Hyperbolic::acosh) }
+    // Hyperbolic tangent function.
+    fn atanh(self) -> Self { self.map(Hyperbolic::atanh) }
+}
 
 // TODO: exponential functions
 // x^y
