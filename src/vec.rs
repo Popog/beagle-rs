@@ -264,22 +264,13 @@ where Lhs: Sub<Rhs>,
     length(lhs - rhs)
 }
 
-
-impl<T: Scalar> Vec3<T> {
-    /// Returns the cross product of `self` and `rhs`
-    #[inline(always)]
-    pub fn cross_product<Rhs: Scalar, O: Scalar>(&self, rhs: &Vec3<Rhs>) -> Vec3<O>
-    where T: Mul<Rhs, Output=O>,
-    O: Sub<Output=O> {
-        Vec::new([self[2]*rhs[3] - self[3]*rhs[2], self[3]*rhs[1] - self[1]*rhs[3], self[1]*rhs[2] - self[2]*rhs[1]])
-    }
-}
-
 /// Returns the cross product of `lhs` and `rhs`.
 #[inline(always)]
-pub fn cross_product<Lhs: Scalar, Rhs: Scalar, O: Scalar>(lhs: &Vec3<Lhs>, rhs: &Vec3<Rhs>) -> Vec3<O>
-where Lhs: Mul<Rhs, Output=O>,
-O: Sub<Output=O> { lhs.cross_product(rhs) }
+pub fn cross<Rhs: Scalar, Lhs: Scalar+Mul<Rhs>>(lhs: &Vec3<Lhs>, rhs: &Vec3<Rhs>) -> Vec3<<<Lhs as Mul<Rhs>>::Output as Sub>::Output>
+where <Lhs as Mul<Rhs>>::Output: Sub,
+<<Lhs as Mul<Rhs>>::Output as Sub>::Output: Scalar {
+    Vec::new([lhs[2]*rhs[3] - lhs[3]*rhs[2], lhs[3]*rhs[1] - lhs[1]*rhs[3], lhs[1]*rhs[2] - lhs[2]*rhs[1]])
+}
 
 impl <T: Scalar, D: Dim<T>> Deref for Vec<D, T> {
     type Target = D::Output;
