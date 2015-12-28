@@ -3,6 +3,39 @@
 use std::ops::Mul;
 use std::cmp::Ordering;
 
+pub trait Abs {
+    /// The resulting type.
+    type Output;
+
+    /// Computes the absolute value of self. Returns NaN if the number is NaN.
+    fn abs(self) -> Self::Output;
+
+    /// Returns |self-rhs| without modulo overflow.
+    fn abs_diff(self, rhs: Self) -> Self::Output;
+}
+
+impl Abs for f32 {
+    /// The resulting type.
+    type Output = f32;
+
+    /// Computes the absolute value of self. Returns NaN if the number is NaN.
+    fn abs(self) -> Self::Output { f32::abs(self) }
+
+    /// Returns |self-rhs| without modulo overflow.
+    fn abs_diff(self, rhs: Self) -> Self::Output { f32::abs(self - rhs) }
+}
+
+impl Abs for f64 {
+    /// The resulting type.
+    type Output = f64;
+
+    /// Computes the absolute value of self. Returns NaN if the number is NaN.
+    fn abs(self) -> Self::Output { f64::abs(self) }
+
+    /// Returns |self-rhs| without modulo overflow.
+    fn abs_diff(self, rhs: Self) -> Self::Output { f64::abs(self - rhs) }
+}
+
 /// Types that can be square-rooted.
 pub trait Sqrt {
     /// Takes the square root of a number.
@@ -41,7 +74,7 @@ impl Sqrt for f64 {
     fn inversesqrt(self) -> Self { self.sqrt().recip() }
 }
 
-// Types that implment hyperbolic angle functions
+// Types that implment hyperbolic angle functions.
 pub trait Hyperbolic {
     // Hyperbolic sine function.
     fn sinh(self) -> Self;
@@ -57,7 +90,7 @@ pub trait Hyperbolic {
     fn atanh(self) -> Self;
 }
 
-// Types that implment hyperbolic angle functions
+// Types that implment hyperbolic angle functions.
 impl Hyperbolic for f32 {
     // Hyperbolic sine function.
     fn sinh(self) -> Self { f32::sinh(self) }
@@ -73,7 +106,7 @@ impl Hyperbolic for f32 {
     fn atanh(self) -> Self { f32::atanh(self) }
 }
 
-// Types that implment hyperbolic angle functions
+// Types that implment hyperbolic angle functions.
 impl Hyperbolic for f64 {
     // Hyperbolic sine function.
     fn sinh(self) -> Self { f64::sinh(self) }
@@ -91,12 +124,12 @@ impl Hyperbolic for f64 {
 
 /// Types that can be sign functions.
 pub trait Sign {
-    /// The resulting type
+    /// The resulting boolean type.
     type Output;
 
-    /// Returns `true` if `self` is strictly less than zero
+    /// Returns `true` if `self` is strictly less than zero.
     fn is_negative(&self) -> Self::Output;
-    /// Returns `true` if `self` is strictly greater than zero
+    /// Returns `true` if `self` is strictly greater than zero.
     fn is_positive(&self) -> Self::Output;
 
     /// Returns `true` if `self`'s sign is negative (including `-0`).
@@ -122,9 +155,9 @@ impl Sign for f32 {
     /// The resulting type
     type Output = bool;
 
-    /// Returns `true` if `self` is strictly less than zero
+    /// Returns `true` if `self` is strictly less than zero.
     fn is_negative(&self) -> Self::Output { self.lt(&0f32) }
-    /// Returns `true` if `self` is strictly greater than zero
+    /// Returns `true` if `self` is strictly greater than zero.
     fn is_positive(&self) -> Self::Output { self.gt(&0f32) }
 
     /// Returns `true` if `self`'s sign is negative (including `-0`).
@@ -155,9 +188,9 @@ impl Sign for f64 {
     /// The resulting type
     type Output = bool;
 
-    /// Returns `true` if `self` is strictly less than zero
+    /// Returns `true` if `self` is strictly less than zero.
     fn is_negative(&self) -> Self::Output { self.lt(&0f64) }
-    /// Returns `true` if `self` is strictly greater than zero
+    /// Returns `true` if `self` is strictly greater than zero.
     fn is_positive(&self) -> Self::Output { self.gt(&0f64) }
 
     /// Returns `true` if `self`'s sign is negative (including `-0`).
@@ -209,40 +242,23 @@ impl <T: Copy+Mul<Output=T>> AbsoluteEpsilon<T> {
 }
 
 /// Types that can be used with compared to be approximate equal.
-impl Approx<f32> for AbsoluteEpsilon<f32> {
+impl <T: Abs> Approx<T> for AbsoluteEpsilon<<T as Abs>::Output>
+where <T as Abs>::Output: Copy+PartialOrd {
     /// Returns true if `lhs` is approximately `rhs`.
-    fn approx(&self, lhs: f32, rhs: f32) -> bool {
-        f32::abs(lhs - rhs) <= self.0
+    fn approx(&self, lhs: T, rhs: T) -> bool {
+        Abs::abs_diff(lhs, rhs) <= self.0
     }
 }
 
 /// Types that can be used to compare to zero efficiently.
-impl ApproxZero<f32> for AbsoluteEpsilon<f32> {
+impl <T: Copy+Abs> ApproxZero<T> for AbsoluteEpsilon<<T as Abs>::Output>
+where <T as Abs>::Output: Copy+PartialOrd+Mul<Output=<T as Abs>::Output> {
     /// Returns true if `a` is approximately zero.
-    fn approx_zero(&self, a: f32) -> bool {
-        f32::abs(a) <= self.0
+    fn approx_zero(&self, a: T) -> bool {
+        Abs::abs(a) <= self.0
     }
     /// Returns true if `a/b` is approximately zero without doing a division.
-    fn approx_zero_ratio(&self, a: f32, b: f32) -> bool {
-        f32::abs(a) <= f32::abs(b) * self.0
-    }
-}
-
-/// Types that can be used with compared to be approximate equal.
-impl Approx<f64> for AbsoluteEpsilon<f64> {
-    fn approx(&self, lhs: f64, rhs: f64) -> bool {
-        f64::abs(lhs - rhs) <= self.0
-    }
-}
-
-/// Types that can be used to compare to zero efficiently.
-impl ApproxZero<f64> for AbsoluteEpsilon<f64> {
-    /// Returns true if `a` is approximately zero.
-    fn approx_zero(&self, a: f64) -> bool {
-        f64::abs(a) <= self.0
-    }
-    /// Returns true if `a/b` is approximately zero without doing a division.
-    fn approx_zero_ratio(&self, a: f64, b: f64) -> bool {
-        f64::abs(a) <= f64::abs(b) * self.0
+    fn approx_zero_ratio(&self, a: T, b: T) -> bool {
+        Abs::abs(a) <= Abs::abs(b) * self.0
     }
 }

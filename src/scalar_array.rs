@@ -8,7 +8,7 @@ use std::ops::{Mul};
 use std::slice::{Iter,IterMut};
 
 use angle;
-use num::{Hyperbolic, Sqrt};
+use num::{Abs,Hyperbolic,Sqrt};
 
 /// Types that can be held in a Matrix/Vector.
 pub trait Scalar: Copy {}
@@ -194,7 +194,7 @@ where <S as ScalarArray>::Scalar: Sqrt {
     fn inversesqrt(self) -> Self { self.map(Sqrt::inversesqrt) }
 }
 
-// Types that implment hyperbolic angle functions
+// Types that implment hyperbolic angle functions.
 impl <S: ScalarArray> Hyperbolic for S
 where <S as ScalarArray>::Scalar: Hyperbolic {
     // Hyperbolic sine function.
@@ -211,6 +211,25 @@ where <S as ScalarArray>::Scalar: Hyperbolic {
     fn atanh(self) -> Self { self.map(Hyperbolic::atanh) }
 }
 
+impl <S: ScalarArray> Abs for S
+where <S as ScalarArray>::Scalar: Abs,
+<<S as ScalarArray>::Scalar as Abs>::Output: Scalar,
+<S as ScalarArray>::Dim: Dim<<<S as Cast<<<S as ScalarArray>::Scalar as Abs>::Output>>::Output as ScalarArray>::Type>,
+S: Cast<<<S as ScalarArray>::Scalar as Abs>::Output> {
+    /// The resulting type.
+    type Output = <S as Cast<<<S as ScalarArray>::Scalar as Abs>::Output>>::Output;
+
+    /// Computes the absolute value of self. Returns NaN if the number is NaN.
+    fn abs(self) -> Self::Output {
+        Cast::<<<S as ScalarArray>::Scalar as Abs>::Output>::unary(&self, |&v| Abs::abs(v))
+    }
+
+    /// Returns |self-rhs| without modulo overflow.
+    fn abs_diff(self, rhs: Self) -> Self::Output {
+        Cast::<<<S as ScalarArray>::Scalar as Abs>::Output>::binary(&self, &rhs, |&l, &r| Abs::abs_diff(l, r))
+    }
+}
+
 // TODO: exponential functions
 // x^y
 //  Tf  pow(Tf x, Tf y)
@@ -224,12 +243,6 @@ where <S as ScalarArray>::Scalar: Hyperbolic {
 //  Tf  log2(Tf x)
 
 // TODO: common functions
-// Returns absolute value:
-//  Tfd abs(Tfd x)
-//  Ti  abs(Ti x)
-// Returns -1.0, 0.0, or 1.0:
-//  Tfd sign(Tfd x)
-//  Ti  sign(Ti x)
 // Returns nearest integer <= x:
 //  Tfd floor(Tfd x)
 // Returns nearest integer with absolute value <= absolute value of x:
