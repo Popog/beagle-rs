@@ -8,6 +8,7 @@ use self::test::Bencher;
 use beagle::vec::Vec3;
 use beagle::mat::Mat3x3;
 use beagle::vec::{faceforward, distance2};
+use beagle::num::{Sqrt, Recip};
 
 #[bench]
 fn bench_add_mat3s(b: &mut Bencher) {
@@ -62,13 +63,109 @@ fn bench_mul_vec_mat3s(b: &mut Bencher) {
 }
 
 #[bench]
-fn bench_add_f64(b: &mut Bencher) {
+fn bench_rsqrt1x32_a(b: &mut Bencher) {
     b.iter(|| {
-        let mut a: f64 = 1.0;
+        let mut a: f32 = 2.0;
 
         let n = test::black_box(10_000);
         for _ in 0..n {
-            a = a+a;
+            a = a+a.sqrt().recip();
+        }
+        a
+    });
+}
+
+#[bench]
+fn bench_rsqrt1x32_b(b: &mut Bencher) {
+    b.iter(|| {
+
+        let mut a: f32 = 2.0;
+
+        let n = test::black_box(10_000);
+        for _ in 0..n {
+            a = a+a.inverse_sqrt();
+        }
+        a
+    });
+}
+
+#[bench]
+fn bench_rsqrt3x32_a(b: &mut Bencher) {
+    b.iter(|| {
+        let mut a: Vec3<f32> = Vec3::from([1.0, 2.0, 3.0]);
+
+        let n = test::black_box(10_000);
+        for _ in 0..n {
+            a = a+a.sqrt().recip();
+        }
+        a
+    });
+}
+
+#[bench]
+fn bench_rsqrt3x32_b(b: &mut Bencher) {
+    b.iter(|| {
+        let mut a: Vec3<f32> = Vec3::from([1.0, 2.0, 3.0]);
+
+        let n = test::black_box(10_000);
+        for _ in 0..n {
+            a = a+a.inverse_sqrt();
+        }
+        a
+    });
+}
+
+
+
+#[bench]
+fn bench_rsqrt1x64_a(b: &mut Bencher) {
+    b.iter(|| {
+        let mut a: f64 = 2.0;
+
+        let n = test::black_box(10_000);
+        for _ in 0..n {
+            a = a+a.sqrt().recip();
+        }
+        a
+    });
+}
+
+#[bench]
+fn bench_rsqrt1x64_b(b: &mut Bencher) {
+    b.iter(|| {
+
+        let mut a: f64 = 2.0;
+
+        let n = test::black_box(10_000);
+        for _ in 0..n {
+            a = a+a.inverse_sqrt();
+        }
+        a
+    });
+}
+
+
+#[bench]
+fn bench_rsqrt3x64_a(b: &mut Bencher) {
+    b.iter(|| {
+        let mut a: Vec3<f64> = Vec3::from([1.0, 2.0, 3.0]);
+
+        let n = test::black_box(10_000);
+        for _ in 0..n {
+            a = a+a.sqrt().recip();
+        }
+        a
+    });
+}
+
+#[bench]
+fn bench_rsqrt3x64_b(b: &mut Bencher) {
+    b.iter(|| {
+        let mut a: Vec3<f64> = Vec3::from([1.0, 2.0, 3.0]);
+
+        let n = test::black_box(10_000);
+        for _ in 0..n {
+            a = a+a.inverse_sqrt();
         }
         a
     });

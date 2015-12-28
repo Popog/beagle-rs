@@ -8,7 +8,7 @@ use std::ops::{Mul};
 use std::slice::{Iter,IterMut};
 
 use angle;
-use num::{Abs,Hyperbolic,Sqrt};
+use num::{Abs,Hyperbolic,Pow,Recip,Sqrt};
 
 /// Types that can be held in a Matrix/Vector.
 pub trait Scalar: Copy {}
@@ -191,7 +191,14 @@ where <S as ScalarArray>::Scalar: Sqrt {
     /// Returns the inverse of the square root of a number. i.e. the value `1/√x`.
     ///
     /// Returns NaN if `self` is a negative number.
-    fn inversesqrt(self) -> Self { self.map(Sqrt::inversesqrt) }
+    fn inverse_sqrt(self) -> Self { self.map(Sqrt::inverse_sqrt) }
+}
+
+/// Types that can have the reciprocal taken.
+impl <S: ScalarArray> Recip for S
+where <S as ScalarArray>::Scalar: Recip {
+    /// Takes the reciprocal (inverse) of a number, `1/x`.
+    fn recip(self) -> Self { self.map(Recip::recip) }
 }
 
 // Types that implment hyperbolic angle functions.
@@ -214,8 +221,8 @@ where <S as ScalarArray>::Scalar: Hyperbolic {
 impl <S: ScalarArray> Abs for S
 where <S as ScalarArray>::Scalar: Abs,
 <<S as ScalarArray>::Scalar as Abs>::Output: Scalar,
-<S as ScalarArray>::Dim: Dim<<<S as Cast<<<S as ScalarArray>::Scalar as Abs>::Output>>::Output as ScalarArray>::Type>,
-S: Cast<<<S as ScalarArray>::Scalar as Abs>::Output> {
+S: Cast<<<S as ScalarArray>::Scalar as Abs>::Output>,
+<S as ScalarArray>::Dim: Dim<<<S as Cast<<<S as ScalarArray>::Scalar as Abs>::Output>>::Output as ScalarArray>::Type> {
     /// The resulting type.
     type Output = <S as Cast<<<S as ScalarArray>::Scalar as Abs>::Output>>::Output;
 
@@ -230,9 +237,18 @@ S: Cast<<<S as ScalarArray>::Scalar as Abs>::Output> {
     }
 }
 
+/// Types that implement the Pow function
+impl <Lhs: ScalarArray, Rhs: ScalarArray<Dim=<Lhs as ScalarArray>::Dim>> Pow<Rhs> for Lhs
+where <Lhs as ScalarArray>::Scalar: Pow<<Rhs as ScalarArray>::Scalar>,
+Lhs: CastBinary<<Rhs as ScalarArray>::Scalar, <Lhs as ScalarArray>::Scalar, RhsArray=Rhs, Output=Lhs>,
+<Lhs as ScalarArray>::Dim: Dim<<Rhs as ScalarArray>::Type> {
+    /// Returns `self` raised to the power `rhs`
+    fn pow(self, rhs: Rhs) -> Self {
+        CastBinary::<<Rhs as ScalarArray>::Scalar, <Lhs as ScalarArray>::Scalar>::binary(&self, &rhs, |&l, &r| Pow::pow(l, r))
+    }
+}
+
 // TODO: exponential functions
-// x^y
-//  Tf  pow(Tf x, Tf y)
 // e^x
 //  Tf  exp(Tf x)
 // ln

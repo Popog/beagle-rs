@@ -213,12 +213,21 @@ where <V as Dot>::Output: Sqrt {
     length2(v).sqrt()
 }
 
+
 /// Returns the normalized version of `v`.
 #[inline(always)]
 pub fn normalize<V: Copy+Dot>(v: V) -> <V as Div<<V as Dot>::Output>>::Output
 where <V as Dot>::Output: Sqrt,
 V: Div<<V as Dot>::Output> {
     v / length(v)
+}
+
+/// Returns an approximated normalized version of `v`.
+#[inline(always)]
+pub fn normalize_approx<V: Copy+Dot>(v: V) -> <V as Mul<<V as Dot>::Output>>::Output
+where <V as Dot>::Output: Sqrt,
+V: Mul<<V as Dot>::Output> {
+    v * length2(v).inverse_sqrt()
 }
 
 /// Returns `n` if `nref.dot(i)` is negative, else `-n`.

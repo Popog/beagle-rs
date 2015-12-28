@@ -2,6 +2,7 @@
 
 use std::ops::Mul;
 use std::cmp::Ordering;
+use std::num::Wrapping;
 
 pub trait Abs {
     /// The resulting type.
@@ -46,7 +47,25 @@ pub trait Sqrt {
     /// Returns the inverse of the square root of a number. i.e. the value `1/√x`.
     ///
     /// Returns NaN if `self` is a negative number.
-    fn inversesqrt(self) -> Self;
+    ///
+    /// ```
+    /// use beagle::num::Sqrt;
+    ///
+    /// let positive = 4.0_f32;
+    /// let negative = -4.0_f32;
+    /// let inf = std::f32::INFINITY;
+    /// let nan = std::f32::NAN;
+    /// let zero = 0f32;
+    /// let negzero = -0f32;
+    ///
+    /// assert!((positive.inverse_sqrt() - 0.5).abs() < 1e-3);
+    /// assert!(negative.inverse_sqrt().is_nan());
+    /// assert!(nan.inverse_sqrt().is_nan());
+    /// assert_eq!(inf.inverse_sqrt(), 0f32);
+    /// assert_eq!(zero.inverse_sqrt(), std::f32::INFINITY);
+    /// assert_eq!(negzero.inverse_sqrt(), std::f32::INFINITY);
+    /// ```
+    fn inverse_sqrt(self) -> Self;
 }
 
 /// Types that can be square-rooted.
@@ -59,7 +78,23 @@ impl Sqrt for f32 {
     /// Returns the inverse of the square root of a number. i.e. the value `1/√x`.
     ///
     /// Returns NaN if `self` is a negative number.
-    fn inversesqrt(self) -> Self { self.sqrt().recip() }
+    fn inverse_sqrt(self) -> Self {
+        use std::mem;
+        use std::f32;
+
+        // Turns out, this already handles NaN input.
+        if self < 0.0 { return f32::NAN; }
+        if self == 0.0 { return f32::INFINITY; }
+        if self == f32::INFINITY { return 0.0; }
+
+        let y: Wrapping<u32> = unsafe { mem::transmute(self) }; // evil floating point bit level hacking
+        let y  = Wrapping(0x5f375a86) - ( y >> 1 );             // what the fuck?
+        let y: f32 = unsafe { mem::transmute(y) };
+        let x2 = self * 0.5;
+        let y  = y * ( 1.5 - ( x2 * y * y ) );     // 1st iteration
+        //let y  = y * ( 1.5 - ( x2 * y * y ) );   // 2nd iteration, this can be removed
+        y
+    }
 }
 /// Types that can be square-rooted.
 impl Sqrt for f64 {
@@ -71,55 +106,120 @@ impl Sqrt for f64 {
     /// Returns the inverse of the square root of a number. i.e. the value `1/√x`.
     ///
     /// Returns NaN if `self` is a negative number.
-    fn inversesqrt(self) -> Self { self.sqrt().recip() }
+    ///
+    fn inverse_sqrt(self) -> Self {
+        use std::mem;
+        use std::f64;
+
+        // Turns out, this already handles NaN input.
+        if self < 0.0 { return f64::NAN; }
+        if self == 0.0 { return f64::INFINITY; }
+        if self == f64::INFINITY { return 0.0; }
+
+        let y: Wrapping<u64> = unsafe { mem::transmute(self) }; // evil floating point bit level hacking
+        let y  = Wrapping(0x5fe6eb50c7b537a9) - ( y >> 1 );     // what the fuck?
+        let y: f64 = unsafe { mem::transmute(y) };
+        let x2 = self * 0.5;
+        let y  = y * ( 1.5 - ( x2 * y * y ) );     // 1st iteration
+        //let y  = y * ( 1.5 - ( x2 * y * y ) );   // 2nd iteration, this can be removed
+        y
+    }
 }
 
-// Types that implment hyperbolic angle functions.
+/// Types that implment hyperbolic angle functions.
 pub trait Hyperbolic {
-    // Hyperbolic sine function.
+    /// Hyperbolic sine function.
     fn sinh(self) -> Self;
-    // Hyperbolic cosine function.
+    /// Hyperbolic cosine function.
     fn cosh(self) -> Self;
-    // Hyperbolic tangent function.
+    /// Hyperbolic tangent function.
     fn tanh(self) -> Self;
-    // Hyperbolic sine function.
+    /// Hyperbolic sine function.
     fn asinh(self) -> Self;
-    // Hyperbolic cosine function.
+    /// Hyperbolic cosine function.
     fn acosh(self) -> Self;
-    // Hyperbolic tangent function.
+    /// Hyperbolic tangent function.
     fn atanh(self) -> Self;
 }
 
-// Types that implment hyperbolic angle functions.
+/// Types that implment hyperbolic angle functions.
 impl Hyperbolic for f32 {
-    // Hyperbolic sine function.
+    /// Hyperbolic sine function.
     fn sinh(self) -> Self { f32::sinh(self) }
-    // Hyperbolic cosine function.
+    /// Hyperbolic cosine function.
     fn cosh(self) -> Self { f32::cosh(self) }
-    // Hyperbolic tangent function.
+    /// Hyperbolic tangent function.
     fn tanh(self) -> Self { f32::tanh(self) }
-    // Hyperbolic sine function.
+    /// Hyperbolic sine function.
     fn asinh(self) -> Self { f32::asinh(self) }
-    // Hyperbolic cosine function.
+    /// Hyperbolic cosine function.
     fn acosh(self) -> Self { f32::acosh(self) }
-    // Hyperbolic tangent function.
+    /// Hyperbolic tangent function.
     fn atanh(self) -> Self { f32::atanh(self) }
 }
 
-// Types that implment hyperbolic angle functions.
+/// Types that implment hyperbolic angle functions.
 impl Hyperbolic for f64 {
-    // Hyperbolic sine function.
+    /// Hyperbolic sine function.
     fn sinh(self) -> Self { f64::sinh(self) }
-    // Hyperbolic cosine function.
+    /// Hyperbolic cosine function.
     fn cosh(self) -> Self { f64::cosh(self) }
-    // Hyperbolic tangent function.
+    /// Hyperbolic tangent function.
     fn tanh(self) -> Self { f64::tanh(self) }
-    // Hyperbolic sine function.
+    /// Hyperbolic sine function.
     fn asinh(self) -> Self { f64::asinh(self) }
-    // Hyperbolic cosine function.
+    /// Hyperbolic cosine function.
     fn acosh(self) -> Self { f64::acosh(self) }
-    // Hyperbolic tangent function.
+    /// Hyperbolic tangent function.
     fn atanh(self) -> Self { f64::atanh(self) }
+}
+
+/// Types that implement the Pow function
+pub trait Pow<Rhs> {
+    /// Returns `self` raised to the power `rhs`
+    fn pow(self, rhs: Rhs) -> Self;
+}
+
+/// Types that implement the Pow function
+impl Pow<f32> for f32 {
+    /// Returns `self` raised to the power `rhs`
+    fn pow(self, rhs: f32) -> Self { f32::powf(self, rhs) }
+}
+
+/// Types that implement the Pow function
+impl Pow<i32> for f32 {
+    /// Returns `self` raised to the power `rhs`
+    fn pow(self, rhs: i32) -> Self { f32::powi(self, rhs) }
+}
+
+/// Types that implement the Pow function
+impl Pow<f64> for f64 {
+    /// Returns `self` raised to the power `rhs`
+    fn pow(self, rhs: f64) -> Self { f64::powf(self, rhs) }
+}
+
+/// Types that implement the Pow function
+impl Pow<i32> for f64 {
+    /// Returns `self` raised to the power `rhs`
+    fn pow(self, rhs: i32) -> Self { f64::powi(self, rhs) }
+}
+
+/// Types that can have the reciprocal taken.
+pub trait Recip {
+    /// Takes the reciprocal (inverse) of a number, `1/x`.
+    fn recip(self) -> Self;
+}
+
+/// Types that can have the reciprocal taken.
+impl Recip for f32 {
+    /// Takes the reciprocal (inverse) of a number, `1/x`.
+    fn recip(self) -> Self { f32::recip(self) }
+}
+
+/// Types that can have the reciprocal taken.
+impl Recip for f64 {
+    /// Takes the reciprocal (inverse) of a number, `1/x`.
+    fn recip(self) -> Self { f64::recip(self) }
 }
 
 /// Types that can be sign functions.
@@ -260,5 +360,28 @@ where <T as Abs>::Output: Copy+PartialOrd+Mul<Output=<T as Abs>::Output> {
     /// Returns true if `a/b` is approximately zero without doing a division.
     fn approx_zero_ratio(&self, a: T, b: T) -> bool {
         Abs::abs(a) <= Abs::abs(b) * self.0
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::num::Wrapping;
+    use super::*;
+
+    #[test]
+    #[ignore]
+    fn test_inverse_sqrt_nan() {
+        use std::mem;
+        use std::f32;
+
+        // Whitebox test all NaN and negative numbers
+        let mut nanu: Wrapping<u32> = unsafe { mem::transmute(f32::INFINITY) };
+        loop {
+             nanu = nanu+Wrapping(1);
+             if nanu == Wrapping(0) { break; }
+             let nan: f32 = unsafe { mem::transmute(nanu) };
+             if nan == 0.0 { continue; }
+             assert!(nan.inverse_sqrt().is_nan(), "inverse_sqrt was not nan for {} ({})", nan, nanu.0);
+        }
     }
 }
