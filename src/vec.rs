@@ -1,4 +1,4 @@
-//! An array of Scalars, written `Vec<D, T>` but pronounced 'vector'.
+//! An array of Scalars, written `Vec<D, V>` but pronounced 'vector'.
 //!
 //! Vectors support binary operations between two Vectors or between one Vector and one Scalar.
 //! All Arithmetic operators and Bitwise operators are supported, where the two Scalar types
@@ -12,22 +12,37 @@
 //! ```
 //! use beagle::vec::{Vec3};
 //!
-//! let v1 = Vec3::from([2f32, 3f32, 5f32]);
-//! let v2 = Vec3::from([7f32, 11f32, 13f32]);
-//! assert_eq!(v1+v2, Vec3::from([9f32, 14f32, 18f32]));
+//! let v1 = Vec3::new([2f32, 3f32, 5f32]);
+//! let v2 = Vec3::new([7f32, 11f32, 13f32]);
+//! assert_eq!(v1+v2, Vec3::new([9f32, 14f32, 18f32]));
 //! ```
 
-use std::borrow::{Borrow, BorrowMut};
-use std::cmp::Ordering;
-use std::ops::{Index,IndexMut,Range,RangeFrom,RangeTo,RangeFull,Deref,DerefMut};
-use std::slice::{Iter,IterMut};
+use std::mem::transmute;
+use std::ops::{
+    Neg,Not,
+    BitAnd,BitOr,BitXor,
+    Shl,Shr,
+    Add,Div,Mul,Rem,Sub,
+    BitAndAssign,BitOrAssign,BitXorAssign,
+    ShlAssign,ShrAssign,
+    AddAssign,DivAssign,MulAssign,RemAssign,SubAssign,
+    Deref,DerefMut,
+};
 
-use num::{ApproxZero,Sign,Sqrt};
-use scalar_array::{Scalar,Dim};
-use scalar_array::{ScalarArray,Fold,Cast,CastBinary};
-use scalar_array::{ComponentPartialEq,ComponentEq,ComponentPartialOrd,ComponentOrd,ComponentMul};
+use super::Value;
+use mat::Mat;
+use num::Sqrt;
+use scalar_array::{
+    Array,Dim,DimHasSmaller,DimRef,DimMut,TwoDim,
+    ScalarArray,ScalarArrayVal,ScalarArrayRef,ScalarArrayMut,
+    VecArrayVal,VecArrayRef,
+    ConcreteScalarArray,HasConcreteScalarArray,ConcreteVecArray,HasConcreteVecArray,
+    One,Two,Three,Four,CustomArrayOne
+};
+use scalar_array::{apply_zip_mut_val,fold,fold_ref,map,map_zip,mul_vector_transpose};
+use scalar_array::vec_array;
 
-/// An array of Scalars, written `Vec<D, T>` but pronounced 'vector'.
+/// An array of Scalars, written `Vec<D, V>` but pronounced 'vector'.
 ///
 /// Vectors support binary operations between two Vectors or between one Vector and one Scalar.
 /// All Arithmetic operators and Bitwise operators are supported, where the two Scalar types
@@ -36,415 +51,410 @@ use scalar_array::{ComponentPartialEq,ComponentEq,ComponentPartialOrd,ComponentO
 /// Vectors also support Negation and Logical Negation where the underlying Scalar Type supports
 /// it.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub struct Vec<D, T: Scalar> (D::Output) where D: Dim<T>;
+pub struct Vec<D, S> (D::Type)
+where D: Dim<S>,
+// TODO: remove elaborted bounds. Blocked on rust/issues#20671
+D::Smaller: Array<S>;
 
-/// Types that represent an array of scalars.
-impl <T: Scalar, D: Dim<T>> ScalarArray for Vec<D, T> {
-    /// The type of the underlying scalar in the array.
-    type Scalar = T;
-    /// The type of a single scalar.
-    type Type = T;
-    /// The dimension of the scalar array.
-    type Dim = D;
-
-    /// Construct a vector from a an array of scalars `v`. Most useful in conjunction
-    /// with `Dim::from_iter`.
-    #[inline(always)]
-    fn new(v: D::Output) -> Self { Vec(v) }
-    /// Returns a slice iterator over the scalars of `self`.
-    #[inline(always)]
-    fn iter(&self) -> Iter<T> { (self.as_ref() as &[T]).iter() }
-    /// Returns a mutable slice iterator over the scalars of `self`.
-    #[inline(always)]
-    fn iter_mut(&mut self) -> IterMut<T> { (self.as_mut() as &mut [T]).iter_mut() }
-    /// Construct a vector from a single scalar value, setting all elements to that value.
-    #[inline(always)]
-    fn from_value(v: T) -> Self { Vec(<D as Dim<T>>::from_value(v)) }
-
-    /// Fold all the scalar values into a single output given two folding functions,
-    /// The first folding function only applies to the first element of the ScalarArray.
-    #[inline(always)]
-    fn fold<U, F0: FnOnce(&Self::Scalar)->U, F: Fn(U, &Self::Scalar)->U>(&self, f0: F0, f: F) -> U {
-        let init = f0(&self[0]);
-        self[1..].iter().fold(init, f)
+impl<S, D: Dim<S>> Vec<D, S>
+// TODO: remove elaborted bounds. Blocked on rust/issues#20671
+where D::Smaller: Array<S>,
+{
+    /// Construct a vector from an array
+    pub fn new(v: D::RawType) -> Self
+    where D::RawType: Into<D::Type> {
+        Vec::from_vec_val(v.into())
     }
 
-    /// Map all the scalar values, keeping the same underlying type.
-    #[inline(always)]
-    fn map<F: Fn(Self::Scalar)->Self::Scalar>(mut self, f: F) -> Self {
-        for v in self.iter_mut() { *v = f(*v); }
-        self
+    /// Construct a Vector from a single value
+    pub fn from_value(s: S) -> Self
+    where S: Clone {
+        Vec::from_vec_val(D::from_value(s))
     }
+
+    //pub fn safe_transmute(v: &D::Type) -> &Vec<D, S> {
+    //    unsafe { transmute(v) }
+    //}
+
+    //pub fn safe_transmute_mut(v: &mut D::Type) -> &mut Self {
+    //    unsafe { transmute(v) }
+    //}
 }
 
-/// Types that can be fold with another `ScalarArray` of the same dimension into single value.
-impl <T: Scalar, Rhs: Scalar, D: Dim<T>+Dim<Rhs>> Fold<Rhs> for Vec<D, T> {
-    /// The right hand side type.
-    type RhsArray = Vec<D, Rhs>;
+impl<S, D: Dim<S>> Deref for Vec<D, S>
+where D::Type: Deref<Target=D::RawType>,
+// TODO: remove elaborted bounds. Blocked on rust/issues#20671
+D::Smaller: Array<S>,
+{
+    type Target = D::RawType;
 
-    /// Fold two `ScalarArray`s together using a binary function.
     #[inline(always)]
-    fn fold_together<O, F0: FnOnce(&<Self as ScalarArray>::Scalar, &Rhs)->O, F: Fn(O, &<Self as ScalarArray>::Scalar, &Rhs)->O>(&self, rhs: &Self::RhsArray, f0: F0, f: F) -> O {
-        let init = f0(&self[0], &rhs[0]);
-        self[1..].iter().zip(rhs[1..].iter()).fold(init, |acc, (l, r)| f(acc, l, r))
-    }
+    fn deref(&self) -> &D::RawType { self.0.deref() }
 }
 
-/// Types that can be transformed from into a `ScalarArray` with Scalar type `O`.
-impl <T: Scalar, O: Scalar, D: Dim<T>+Dim<O>> Cast<O> for Vec<D, T> {
-    /// The resulting type
-    type Output = Vec<D, O>;
-
-    /// Transform a single `ScalarArray` using a unary function.
+impl<S, D: Dim<S>> DerefMut for Vec<D, S>
+where D::Type: DerefMut<Target=D::RawType>,
+// TODO: remove elaborted bounds. Blocked on rust/issues#20671
+D::Smaller: Array<S>,
+{
     #[inline(always)]
-    fn unary<F: Fn(&<Self as ScalarArray>::Scalar)->O>(&self, f: F) -> Self::Output {
-        Vec::new(<D as Dim<O>>::from_iter(self.iter().map(|s| f(s))))
-    }
-
-    /// Transform two binary `ScalarArray`s using a binary function.
-    #[inline(always)]
-    fn binary<F: Fn(&<Self as ScalarArray>::Scalar, &<Self as ScalarArray>::Scalar)->O>(&self, rhs: &Self, f: F) -> Self::Output {
-        Vec::new(<D as Dim<O>>::from_iter(self.iter().zip(rhs.iter()).map(|(l, r)| f(l, r))))
-    }
+    fn deref_mut(&mut self) -> &mut D::RawType { self.0.deref_mut() }
 }
 
-/// Types that can be transformed from into a `ScalarArray` with Scalar type `O`.
-impl <T: Scalar, Rhs: Scalar, O: Scalar, D: Dim<T>+Dim<Rhs>+Dim<O>> CastBinary<Rhs, O> for Vec<D, T> {
-    /// The right hand side type.
-    type RhsArray = Vec<D, Rhs>;
+/// An alias for Vec&lt;One, V&gt;
+pub type Vec1<S> = Vec<One, S>;
+/// An alias for Vec&lt;One, V&gt;
+pub type Vec2<S> = Vec<Two, S>;
+/// An alias for Vec&lt;One, V&gt;
+pub type Vec3<S> = Vec<Three, S>;
+/// An alias for Vec&lt;One, V&gt;
+pub type Vec4<S> = Vec<Four, S>;
 
-    /// The resulting type.
-    type Output = Vec<D, O>;
-
-    /// Transform two binary `ScalarArray`s using a binary function.
-    #[inline(always)]
-    fn binary<F: Fn(&<Self as ScalarArray>::Scalar, &Rhs)->O>(&self, rhs: &Self::RhsArray, f: F) -> Self::Output {
-        Vec::new(<D as Dim<O>>::from_iter(self.iter().zip(rhs.iter()).map(|(l, r)| f(l, r))))
-    }
+impl<S, D: Dim<S>> ScalarArray for Vec<D, S>
+// TODO: remove elaborted bounds. Blocked on rust/issues#20671
+where D::Smaller: Array<S>,
+{
+    type Scalar = S;
+    type Row = D;
+    type Dim = One;
 }
 
-impl <T: Scalar, D: Dim<T>> Vec<D, T> {
-    /// Returns the sum of all the elements of `self`.
+impl<S, D: Dim<S>> ScalarArrayVal for Vec<D, S>
+// TODO: remove elaborted bounds. Blocked on rust/issues#20671
+where D::Smaller: Array<S>,
+{
     #[inline(always)]
-    pub fn sum(&self) -> T
-    where T: Add<Output=T> {
-        self.fold(|&i| i, |sum, &i| sum + i)
-    }
-
-    // TODO: geometric functions
-    // refraction vector
-    //  Tfd  refract(Tfd I, Tfd N, float eta)
+    fn get_val(self) -> CustomArrayOne<D::Type> { CustomArrayOne([self.0]) }
 }
 
-/// Returns the sum of all the elements of `v`.
-#[inline(always)]
-pub fn sum<T: Scalar, D: Dim<T>>(v: &Vec<D, T>) -> T
-where T: Add<Output=T> { v.sum() }
-
-/// Types that can be Dot producted
-pub trait Dot<Rhs=Self> {
-    /// The resulting type.
-    type Output: Scalar;
-    /// Returns the dot product of `self` and `rhs`.
+impl<S, D: DimRef<S>> ScalarArrayRef for Vec<D, S>
+// TODO: remove elaborted bounds. Blocked on rust/issues#20671
+where for<'a> D::Smaller: Array<S> + Array<&'a S>,
+{
     #[inline(always)]
-    fn dot(self, rhs: Rhs) -> Self::Output;
-}
-
-impl <Rhs: Scalar, T: Scalar+Mul<Rhs>, D: Dim<T>+Dim<Rhs>> Dot<Vec<D, Rhs>> for Vec<D, T>
-where <T as Mul<Rhs>>::Output: Scalar+Add<Output=<T as Mul<Rhs>>::Output> {
-    /// The resulting type.
-    type Output = <T as Mul<Rhs>>::Output;
-    /// Returns the dot product of `self` and `rhs`.
-    #[inline(always)]
-    fn dot(self, rhs: Vec<D, Rhs>) -> Self::Output {
-        Fold::<Rhs>::fold_together(&self, &rhs, |&l, &r| l*r, |acc, &l, &r| acc + l*r)
+    fn get_ref(&self) -> <One as Array<<D as Array<&S>>::Type>>::Type {
+        CustomArrayOne([D::get_ref(&self.0)])
     }
 }
 
-impl <'l, Rhs: Scalar, T: Scalar+Mul<Rhs>, D: Dim<T>+Dim<Rhs>> Dot<Vec<D, Rhs>> for &'l Vec<D, T>
-where <T as Mul<Rhs>>::Output: Scalar+Add<Output=<T as Mul<Rhs>>::Output> {
-    /// The resulting type.
-    type Output = <T as Mul<Rhs>>::Output;
-    /// Returns the dot product of `self` and `rhs`.
+impl<S, D: DimMut<S>> ScalarArrayMut for Vec<D, S>
+// TODO: remove elaborted bounds. Blocked on rust/issues#20671
+where for<'a> D::Smaller: Array<S> + Array<&'a S> + Array<&'a mut S>,
+{
     #[inline(always)]
-    fn dot(self, rhs: Vec<D, Rhs>) -> Self::Output {
-        Fold::<Rhs>::fold_together(self, &rhs, |&l, &r| l*r, |acc, &l, &r| acc + l*r)
+    fn get_mut(&mut self) -> <One as Array<<D as Array<&mut S>>::Type>>::Type {
+        CustomArrayOne([D::get_mut(&mut self.0)])
     }
 }
 
-impl <'r, Rhs: Scalar, T: Scalar+Mul<Rhs>, D: Dim<T>+Dim<Rhs>> Dot<&'r Vec<D, Rhs>> for Vec<D, T>
-where <T as Mul<Rhs>>::Output: Scalar+Add<Output=<T as Mul<Rhs>>::Output> {
-    /// The resulting type.
-    type Output = <T as Mul<Rhs>>::Output;
-    /// Returns the dot product of `self` and `rhs`.
+impl<S, D: Dim<S>> VecArrayVal for Vec<D, S>
+// TODO: remove elaborted bounds. Blocked on rust/issues#20671
+where D::Smaller: Array<S>,
+{
     #[inline(always)]
-    fn dot(self, rhs: &'r Vec<D, Rhs>) -> Self::Output {
-        Fold::<Rhs>::fold_together(&self, rhs, |&l, &r| l*r, |acc, &l, &r| acc + l*r)
+    fn get_vec_val(self) -> D::Type {
+        self.0
     }
 }
 
-impl <'l, 'r, Rhs: Scalar, T: Scalar+Mul<Rhs>, D: Dim<T>+Dim<Rhs>> Dot<&'r Vec<D, Rhs>> for &'l Vec<D, T>
-where <T as Mul<Rhs>>::Output: Scalar+Add<Output=<T as Mul<Rhs>>::Output> {
-    /// The resulting type.
-    type Output = <T as Mul<Rhs>>::Output;
-    /// Returns the dot product of `self` and `rhs`.
+impl<S, D: DimRef<S>> VecArrayRef for Vec<D, S>
+// TODO: remove elaborted bounds. Blocked on rust/issues#20671
+where for<'a> D::Smaller: Array<S> + Array<&'a S>,
+{
     #[inline(always)]
-    fn dot(self, rhs: &'r Vec<D, Rhs>) -> Self::Output {
-        Fold::<Rhs>::fold_together(self, rhs, |&l, &r| l*r, |acc, &l, &r| acc + l*r)
+    fn get_vec_ref(&self) -> <D as Array<&S>>::Type {
+        D::get_ref(&self.0)
     }
 }
 
-/// Returns the dot product of `lhs` and `rhs`.
-#[inline(always)]
-pub fn dot<Rhs, Lhs: Dot<Rhs>>(lhs:Lhs, rhs: Rhs) -> <Lhs as Dot<Rhs>>::Output {
-    lhs.dot(rhs)
+impl<S, T, D: Dim<S>, D2: Dim<T>> HasConcreteScalarArray<T, D2> for Vec<D, S>
+// TODO: remove elaborted bounds. Blocked on rust/issues#20671
+where D::Smaller: Array<S>,
+D2::Smaller: Array<T>
+{
+    /// The type of a concrete ScalarArray of the specified type
+    type Concrete = Vec<D2, T>;
 }
 
-/// Returns the length squared of `v`.
-#[inline(always)]
-pub fn length2<V: Copy+Dot>(v: V) -> <V as Dot>::Output {
-    v.dot(v)
-}
-
-/// Returns the length of `v`.
-#[inline(always)]
-pub fn length<V: Copy+Dot>(v: V) -> <V as Dot>::Output
-where <V as Dot>::Output: Sqrt {
-    length2(v).sqrt()
-}
-
-
-/// Returns the normalized version of `v`.
-#[inline(always)]
-pub fn normalize<V: Copy+Dot>(v: V) -> <V as Div<<V as Dot>::Output>>::Output
-where <V as Dot>::Output: Sqrt,
-V: Div<<V as Dot>::Output> {
-    v / length(v)
-}
-
-/// Returns an approximated normalized version of `v`.
-#[inline(always)]
-pub fn normalize_approx<V: Copy+Dot>(v: V) -> <V as Mul<<V as Dot>::Output>>::Output
-where <V as Dot>::Output: Sqrt,
-V: Mul<<V as Dot>::Output> {
-    v * length2(v).inverse_sqrt()
-}
-
-/// Returns `n` if `nref.dot(i)` is negative, else `-n`.
-pub fn faceforward<N: Neg<Output=N>, I, NRef: Dot<I>>(n: N, i: I, nref: NRef) -> N
-where <NRef as Dot<I>>::Output: Sign<Output=bool>,
-N: Mul<<NRef as Dot<I>>::Output, Output=N> {
-    if nref.dot(i).is_negative() { n } else { -n }
-}
-
-/// Returns `cos²(θ) < ε²`, where `θ` = the angle between `a` and `b`.
-#[inline]
-pub fn is_perpendicular<O:Scalar, B: Copy+Dot, A: Copy+Dot+Dot<B>>(a: A, b: B, epsilon_squared: &ApproxZero<O>) -> bool
-where <A as Dot<B>>::Output: Mul<Output=O>,
-<A as Dot>::Output: Mul<<B as Dot>::Output, Output=O> {
-    // We're looking to return abs(cos(θ)) <= ε
-    // Proof:
-    // ∵                 a·b  =  |a|*|b|*cos(θ)
-    // ∵            cos²(θ)  <=  ε²
-    //     |a|²*|b|²*cos²(θ) <=  |a|²*|b|²*ε²
-    //   (|a|*|b|*|cos(θ)|)² <=  |a|²*|b|²*ε²
-    //                (a·b)² <=  |a|²*|b|²*ε²
-    // ∴  (a·b)² / |a|²*|b|² <=  ε²
-    let a_dot_b = a.dot(b);
-    epsilon_squared.approx_zero_ratio(a_dot_b * a_dot_b, length2(a) * length2(b))
-}
-
-/// Reflects `i` against `n` as `i - n * dot(i,n) * 2`.
-pub fn reflect<N: Copy, I: Copy+Dot<N>>(i: I, n: N) -> <I as Sub<<N as Mul<<<I as Dot<N>>::Output as Add>::Output>>::Output>>::Output
-where <I as Dot<N>>::Output: Add,
-N: Mul<<<I as Dot<N>>::Output as Add>::Output>,
-I: Sub<<N as Mul<<<I as Dot<N>>::Output as Add>::Output>>::Output> {
-    let i_n = i.dot(n);
-    i - n * (i_n+i_n)
-}
-
-/// Returns the distance squared between `lhs` and `rhs`.
-#[inline]
-pub fn distance2<Rhs, Lhs>(lhs: Lhs, rhs: Rhs) -> <<Lhs as Sub<Rhs>>::Output as Dot>::Output
-where Lhs: Sub<Rhs>,
-<Lhs as Sub<Rhs>>::Output: Copy+Dot {
-    length2(lhs - rhs)
-}
-
-/// Returns the distance between `lhs` and `rhs`.
-#[inline]
-pub fn distance<Rhs, Lhs>(lhs: Lhs, rhs: Rhs) -> <<Lhs as Sub<Rhs>>::Output as Dot>::Output
-where Lhs: Sub<Rhs>,
-<Lhs as Sub<Rhs>>::Output: Copy+Dot,
-<<Lhs as Sub<Rhs>>::Output as Dot>::Output: Sqrt {
-    length(lhs - rhs)
-}
-
-/// Returns the cross product of `lhs` and `rhs`.
-#[inline(always)]
-pub fn cross<Rhs: Scalar, Lhs: Scalar+Mul<Rhs>>(lhs: &Vec3<Lhs>, rhs: &Vec3<Rhs>) -> Vec3<<<Lhs as Mul<Rhs>>::Output as Sub>::Output>
-where <Lhs as Mul<Rhs>>::Output: Sub,
-<<Lhs as Mul<Rhs>>::Output as Sub>::Output: Scalar {
-    Vec::new([lhs[2]*rhs[3] - lhs[3]*rhs[2], lhs[3]*rhs[1] - lhs[1]*rhs[3], lhs[1]*rhs[2] - lhs[2]*rhs[1]])
-}
-
-impl <T: Scalar, D: Dim<T>> Deref for Vec<D, T> {
-    type Target = D::Output;
-    #[inline] fn deref<'a>(&'a self) -> &'a Self::Target { &self.0 }
-}
-impl <T: Scalar, D: Dim<T>>  DerefMut for Vec<D, T> {
-    #[inline] fn deref_mut<'a>(&'a mut self) -> &'a mut <Self as Deref>::Target { &mut self.0 }
-}
-
-impl <T: Scalar, D: Dim<T>> Borrow   <[T]> for Vec<D, T> {  #[inline(always)] fn borrow    (&    self) -> &    [T] { self.0.borrow() }  }
-impl <T: Scalar, D: Dim<T>> BorrowMut<[T]> for Vec<D, T> {  #[inline(always)] fn borrow_mut(&mut self) -> &mut [T] { self.0.borrow_mut() }  }
-
-impl <T: Scalar, D: Dim<T>> AsRef<[T]> for Vec<D, T> {  #[inline(always)] fn as_ref(&    self) -> &    [T] { self.0.as_ref() }  }
-impl <T: Scalar, D: Dim<T>> AsMut<[T]> for Vec<D, T> {  #[inline(always)] fn as_mut(&mut self) -> &mut [T] { self.0.as_mut() }  }
-
-// d888888b d8b   db d8888b. d88888b db    db
-//   `88'   888o  88 88  `8D 88'     `8b  d8'
-//    88    88V8o 88 88   88 88ooooo  `8bd8'
-//    88    88 V8o88 88   88 88~~~~~  .dPYb.
-//   .88.   88  V888 88  .8D 88.     .8P  Y8.
-// Y888888P VP   V8P Y8888D' Y88888P YP    YP
-
-impl <T: Scalar, D: Dim<T>> Index<usize> for Vec<D, T> {
-    type Output = T;
+impl<S, D: Dim<S>> ConcreteScalarArray for Vec<D, S>
+// TODO: remove elaborted bounds. Blocked on rust/issues#20671
+where D::Smaller: Array<S>
+{
     #[inline(always)]
-    fn index(&self, i: usize) -> &Self::Output { &(self.as_ref() as &[T])[i] }
-}
-impl <T: Scalar, D: Dim<T>> IndexMut<usize> for Vec<D, T> {
-    #[inline(always)]
-    fn index_mut(&mut self, i: usize) -> &mut Self::Output { &mut (self.as_mut() as &mut [T])[i] }
-}
-impl <T: Scalar, D: Dim<T>> Index<Range<usize>> for Vec<D, T> {
-    type Output = [T];
-    #[inline(always)]
-    fn index(&self, i: Range<usize>) -> &Self::Output { &(self.as_ref() as &[T])[i] }
-}
-impl <T: Scalar, D: Dim<T>> IndexMut<Range<usize>> for Vec<D, T> {
-    #[inline(always)]
-    fn index_mut(&mut self, i: Range<usize>) -> &mut Self::Output { &mut (self.as_mut() as &mut [T])[i] }
-}
-impl <T: Scalar, D: Dim<T>> Index<RangeTo<usize>> for Vec<D, T> {
-    type Output = [T];
-    #[inline(always)]
-    fn index(&self, i: RangeTo<usize>) -> &Self::Output { &(self.as_ref() as &[T])[i] }
-}
-impl <T: Scalar, D: Dim<T>> IndexMut<RangeTo<usize>> for Vec<D, T> {
-    #[inline(always)]
-    fn index_mut(&mut self, i: RangeTo<usize>) -> &mut Self::Output { &mut (self.as_mut() as &mut [T])[i] }
-}
-impl <T: Scalar, D: Dim<T>> Index<RangeFrom<usize>> for Vec<D, T> {
-    type Output = [T];
-    #[inline(always)]
-    fn index(&self, i: RangeFrom<usize>) -> &Self::Output { &(self.as_ref() as &[T])[i] }
-}
-impl <T: Scalar, D: Dim<T>> IndexMut<RangeFrom<usize>> for Vec<D, T> {
-    #[inline(always)]
-    fn index_mut(&mut self, i: RangeFrom<usize>) -> &mut Self::Output { &mut (self.as_mut() as &mut [T])[i] }
-}
-impl <T: Scalar, D: Dim<T>> Index<RangeFull> for Vec<D, T> {
-    type Output = [T];
-    #[inline(always)]
-    fn index(&self, i: RangeFull) -> &Self::Output { &(self.as_ref() as &[T])[i] }
-}
-impl <T: Scalar, D: Dim<T>> IndexMut<RangeFull> for Vec<D, T> {
-    #[inline(always)]
-    fn index_mut(&mut self, i: RangeFull) -> &mut Self::Output { &mut (self.as_mut() as &mut [T])[i] }
-}
-
-impl<'a, T: Scalar, D: Dim<T>> IntoIterator for &'a Vec<D, T> {
-    type Item = &'a T;
-    type IntoIter = Iter<'a, T>;
-    fn into_iter(self) -> Self::IntoIter { self.iter() }
-}
-impl<'a, T: Scalar, D: Dim<T>> IntoIterator for &'a mut Vec<D, T> {
-    type Item = &'a mut T;
-    type IntoIter = IterMut<'a, T>;
-    fn into_iter(self) -> Self::IntoIter { self.iter_mut() }
-}
-
-//  .o88b.  .d88b.  .88b  d88. d8888b.  .d88b.  d8b   db d88888b d8b   db d888888b
-// d8P  Y8 .8P  Y8. 88'YbdP`88 88  `8D .8P  Y8. 888o  88 88'     888o  88 `~~88~~'
-// 8P      88    88 88  88  88 88oodD' 88    88 88V8o 88 88ooooo 88V8o 88    88
-// 8b      88    88 88  88  88 88~~~   88    88 88 V8o88 88~~~~~ 88 V8o88    88
-// Y8b  d8 `8b  d8' 88  88  88 88      `8b  d8' 88  V888 88.     88  V888    88
-//  `Y88P'  `Y88P'  YP  YP  YP 88       `Y88P'  VP   V8P Y88888P VP   V8P    YP
-
-impl <T: Scalar+PartialEq, D: Dim<T>+Dim<bool>> ComponentPartialEq for Vec<D, T> {}
-impl <T: Scalar+Eq, D: Dim<T>+Dim<bool>> ComponentEq for Vec<D, T> {}
-impl <T: Scalar+PartialOrd, D: Dim<T>+Dim<bool>+Dim<Option<Ordering>>> ComponentPartialOrd for Vec<D, T> {}
-impl <T: Scalar+Ord, D: Dim<T>+Dim<bool>+Dim<Option<Ordering>>+Dim<Ordering>> ComponentOrd for Vec<D, T> {}
-
-/// Types that can be component-wise multiplied.
-impl <T: Scalar, Rhs: Scalar, D: Dim<T>+Dim<Rhs>> ComponentMul<Rhs> for Vec<D, T>
-where T: Mul<Rhs>,
-<T as Mul<Rhs>>::Output: Scalar,
-D: Dim<<T as Mul<Rhs>>::Output> {
-    /// The right hand side type.
-    type RhsArray = Vec<D, Rhs>;
-
-    /// The resulting type.
-    type Output = Vec<D, <T as Mul<Rhs>>::Output>;
-
-    /// Multiplies the components of `self` and `rhs`.
-    fn cmp_mul(&self, rhs: &Self::RhsArray) -> Self::Output {
-        self * rhs
+    fn from_val(v: <One as Array<D::Type>>::Type) -> Self {
+        let [v] = v.0;
+        Vec(v)
     }
 }
 
+impl<S, T, D: Dim<S>, D2: Dim<T>> HasConcreteVecArray<T, D2> for Vec<D, S>
+// TODO: remove elaborted bounds. Blocked on rust/issues#20671
+where D::Smaller: Array<S>,
+D2::Smaller: Array<T>
+{}
 
-include!(concat!(env!("OUT_DIR"), "/vec.rs"));
+impl<S, D: Dim<S>> ConcreteVecArray for Vec<D, S>
+// TODO: remove elaborted bounds. Blocked on rust/issues#20671
+where D::Smaller: Array<S>
+{
+    #[inline(always)]
+    fn from_vec_val(v: D::Type) -> Self { Vec(v) }
+}
+
+//impl<S> Vec3Array for Vec3<S> {}
+
+
+/// Multiply two Vectors component-wise, summing the results. Known as a dot product.
+pub fn dot<S, T>(s: S, t: T) -> <S::Scalar as Mul<T::Scalar>>::Output
+where S: VecArrayVal,
+S::Row: Dim<T::Scalar>,
+T: VecArrayVal<Row=S::Row>,
+S::Scalar: Mul<T::Scalar>,
+<S::Scalar as Mul<T::Scalar>>::Output: Add<Output=<S::Scalar as Mul<T::Scalar>>::Output>,
+// TODO: remove elaborted bounds. Blocked on rust/issues#20671
+<S::Row as DimHasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar>,
+{
+    vec_array::dot::<S::Scalar, S::Row, _>(s.get_vec_val(), t.get_vec_val())
+}
+
+/// Returns the length squared of `s`.
+pub fn length2<S>(s: S) -> <S::Scalar as Mul>::Output
+where S: VecArrayVal,
+S::Scalar: Mul+Clone,
+<S::Scalar as Mul>::Output: Add<Output=<S::Scalar as Mul>::Output>,
+// TODO: remove elaborted bounds. Blocked on rust/issues#20671
+<S::Row as DimHasSmaller>::Smaller: Array<S::Scalar>,
+{
+    fold(s, |s| s.clone()*s, |init, s| init + (s.clone() * s))
+}
+
+/// Returns the length of `s`.
+pub fn length<S>(s: S) -> <<S::Scalar as Mul>::Output as Sqrt>::Output
+where S: VecArrayVal,
+S::Scalar: Mul+Clone,
+<S::Scalar as Mul>::Output: Add<Output=<S::Scalar as Mul>::Output> + Sqrt,
+// TODO: remove elaborted bounds. Blocked on rust/issues#20671
+<S::Row as DimHasSmaller>::Smaller: Array<S::Scalar>,
+{
+    length2(s).sqrt()
+}
+
+/// Returns an approximated normalized version of `v`. This is faster than just `v / v.length()`
+/// as it avoids division by using fast inverse square root.
+pub fn normalize<S>(s: S) -> <S as Mul<<<S::Scalar as Mul>::Output as Sqrt>::Output>>::Output
+where S: VecArrayRef + Mul<<<<S as ScalarArray>::Scalar as Mul>::Output as Sqrt>::Output>,
+S::Scalar: Mul+Clone,
+<S::Scalar as Mul>::Output: Add<Output=<S::Scalar as Mul>::Output> + Sqrt,
+S::Row: DimRef<S::Scalar>,
+// TODO: remove elaborted bounds. Blocked on rust/issues#20671
+for<'a> <S::Row as DimHasSmaller>::Smaller: Array<S::Scalar> + Array<&'a S::Scalar>,
+{
+    let length2 = fold_ref(&s, |s| s.clone()*s.clone(), |init, s| init + (s.clone() * s.clone()));
+    s * length2.inverse_sqrt()
+}
+
+
+// TODO: geometric functions
+// refraction vector
+//  Tfd  refract(Tfd I, Tfd N, float eta)
+
+
+macro_rules! impl_vec_unop {
+    ($($trait_name:ident::$method_name:ident)+) => {$(
+impl<S, D: Dim<S>> $trait_name for Vec<D, S>
+where D: Dim<S::Output>,
+S: $trait_name,
+// TODO: remove elaborted bounds. Blocked on rust/issues#20671
+D::Smaller: Array<S> + Array<S::Output>,
+{
+    type Output = Vec<D, S::Output>;
+    fn $method_name(self) -> Self::Output { map(self, $trait_name::$method_name) }
+}
+    )+};
+}
+
+macro_rules! impl_vec_binop {
+    ($($trait_name:ident::$method_name:ident)+) => {$(
+        impl_vec_binop!{$trait_name::$method_name for Vec}
+        impl_vec_binop!{$trait_name::$method_name for Value}
+    )+};
+
+    ($trait_name:ident::$method_name:ident for Vec) => {
+impl<S, D: Dim<S>, Rhs> $trait_name<Rhs> for Vec<D, S>
+where Rhs: VecArrayVal<Row=D>+,
+D: Dim<Rhs::Scalar> + Dim<S::Output>,
+S: $trait_name<Rhs::Scalar>,
+// TODO: remove elaborted bounds. Blocked on rust/issues#20671
+D::Smaller: Array<S> + Array<Rhs::Scalar> + Array<S::Output>,
+{
+    type Output = Vec<D, S::Output>;
+    fn $method_name(self, rhs: Rhs) -> Self::Output { map_zip(self, rhs, $trait_name::$method_name) }
+}
+    };
+
+    ($trait_name:ident::$method_name:ident for Value) => {
+impl<S, D: Dim<S>, Rhs> $trait_name<Value<Rhs>> for Vec<D, S>
+where Rhs: Clone,
+<D as Array<Rhs>>::Type: Clone,
+D: Dim<Rhs> + Dim<S::Output>,
+S: $trait_name<Rhs>,
+// TODO: remove elaborted bounds. Blocked on rust/issues#20671
+D::Smaller: Array<S> + Array<Rhs> + Array<S::Output>,
+{
+    type Output = Vec<D, S::Output>;
+    fn $method_name(self, rhs: Value<Rhs>) -> Self::Output {
+        map_zip(self, Vec::from_vec_val(D::from_value(rhs.0)), $trait_name::$method_name)
+    }
+}
+impl<S, D: Dim<S>, Lhs> $trait_name<Vec<D, S>> for Value<Lhs>
+where Lhs: Clone,
+<D as Array<Lhs>>::Type: Clone,
+D: Dim<Lhs> + Dim<Lhs::Output>,
+Lhs: $trait_name<S>,
+// TODO: remove elaborted bounds. Blocked on rust/issues#20671
+D::Smaller: Array<S> + Array<Lhs> + Array<Lhs::Output>,
+{
+    type Output = Vec<D, Lhs::Output>;
+    fn $method_name(self, rhs: Vec<D, S>) -> Self::Output {
+        map_zip(Vec::<_, Lhs>::from_vec_val(D::from_value(self.0)), rhs, $trait_name::$method_name)
+    }
+}
+    };
+}
+
+macro_rules! impl_vec_binop_assign {
+    ($($trait_name:ident::$method_name:ident)+) => {$(
+        impl_vec_binop_assign!{$trait_name::$method_name for Vec}
+        impl_vec_binop_assign!{$trait_name::$method_name for Value}
+    )+};
+
+    ($trait_name:ident::$method_name:ident for Vec) => {
+impl<S, D: DimMut<S>, Rhs> $trait_name<Rhs> for Vec<D, S>
+where Rhs: VecArrayVal<Row=D>,
+D: Dim<Rhs::Scalar>,
+S: $trait_name<Rhs::Scalar>,
+// TODO: remove elaborted bounds. Blocked on rust/issues#20671
+for<'a> D::Smaller: Array<S> + Array<Rhs::Scalar> + Array<&'a S> + Array<&'a mut S>,
+{
+    fn $method_name(&mut self, rhs: Rhs) { apply_zip_mut_val(self, rhs, $trait_name::$method_name) }
+}
+    };
+
+    ($trait_name:ident::$method_name:ident for Value) => {
+impl<S, D: DimMut<S>, Rhs> $trait_name<Value<Rhs>> for Vec<D, S>
+where Rhs: Clone,
+<D as Array<Rhs>>::Type: Clone,
+D: Dim<Rhs>,
+S: $trait_name<Rhs>,
+// TODO: remove elaborted bounds. Blocked on rust/issues#20671
+for<'a> D::Smaller: Array<S> + Array<Rhs> + Array<&'a S> + Array<&'a mut S>,
+{
+    fn $method_name(&mut self, rhs: Value<Rhs>) {
+        apply_zip_mut_val(self, Vec::from_vec_val(D::from_value(rhs.0)), $trait_name::$method_name)
+    }
+}
+    };
+}
+
+impl_vec_unop!{Neg::neg Not::not}
+
+impl_vec_binop!{
+    BitAnd::bitand BitOr::bitor BitXor::bitxor
+    Shl::shl Shr::shr
+    Add::add Div::div Mul::mul Rem::rem Sub::sub
+}
+impl_vec_binop_assign!{
+    BitAndAssign::bitand_assign BitOrAssign::bitor_assign BitXorAssign::bitxor_assign
+    ShlAssign::shl_assign ShrAssign::shr_assign
+    AddAssign::add_assign DivAssign::div_assign MulAssign::mul_assign RemAssign::rem_assign SubAssign::sub_assign
+}
+
+impl<S, T, C, D> Mul<Mat<D, C, T>> for Vec<D, S>
+where C: Dim<T> + Dim<S> + Dim<S::Output>,
+D: Dim<S> + TwoDim<S, C> + TwoDim<T, C>,
+S: Clone,
+S: Mul<T>,
+S::Output: Add<Output=S::Output>,
+// TODO: remove elaborted bounds. Blocked on rust/issues#20671
+C::Smaller: Array<S> + Array<T> + Array<S::Output>,
+D::Smaller: Array<S> + Array<<C as Array<S>>::Type> + Array<<C as Array<T>>::Type>,
+{
+    type Output = Vec<C, S::Output>;
+    fn mul(self, rhs: Mat<D, C, T>) -> Self::Output {
+        mul_vector_transpose(self, rhs)
+    }
+}
+
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn test_vec_neg() {
-        assert_eq!(-Vec1::from([1f64]),                   Vec1::from([-1f64]));
-        assert_eq!(-Vec2::from([1f64, 2f64]),             Vec2::from([-1f64, -2f64]));
-        assert_eq!(-Vec3::from([1f64, 2f64, 3f64]),       Vec3::from([-1f64, -2f64, -3f64]));
-        assert_eq!(-Vec4::from([1f64, 2f64, 3f64, 4f64]), Vec4::from([-1f64, -2f64, -3f64, -4f64]));
-
-        assert_eq!(-Vec1::from([1f32]),                   Vec1::from([-1f32]));
-        assert_eq!(-Vec2::from([1f32, 2f32]),             Vec2::from([-1f32, -2f32]));
-        assert_eq!(-Vec3::from([1f32, 2f32, 3f32]),       Vec3::from([-1f32, -2f32, -3f32]));
-        assert_eq!(-Vec4::from([1f32, 2f32, 3f32, 4f32]), Vec4::from([-1f32, -2f32, -3f32, -4f32]));
-
-        assert_eq!(-Vec1::from([1i64]),                   Vec1::from([-1i64]));
-        assert_eq!(-Vec2::from([1i64, 2i64]),             Vec2::from([-1i64, -2i64]));
-        assert_eq!(-Vec3::from([1i64, 2i64, 3i64]),       Vec3::from([-1i64, -2i64, -3i64]));
-        assert_eq!(-Vec4::from([1i64, 2i64, 3i64, 4i64]), Vec4::from([-1i64, -2i64, -3i64, -4i64]));
-
-        assert_eq!(-Vec1::from([1i32]),                   Vec1::from([-1i32]));
-        assert_eq!(-Vec2::from([1i32, 2i32]),             Vec2::from([-1i32, -2i32]));
-        assert_eq!(-Vec3::from([1i32, 2i32, 3i32]),       Vec3::from([-1i32, -2i32, -3i32]));
-        assert_eq!(-Vec4::from([1i32, 2i32, 3i32, 4i32]), Vec4::from([-1i32, -2i32, -3i32, -4i32]));
-
-        assert_eq!(-Vec1::from([1i16]),                   Vec1::from([-1i16]));
-        assert_eq!(-Vec2::from([1i16, 2i16]),             Vec2::from([-1i16, -2i16]));
-        assert_eq!(-Vec3::from([1i16, 2i16, 3i16]),       Vec3::from([-1i16, -2i16, -3i16]));
-        assert_eq!(-Vec4::from([1i16, 2i16, 3i16, 4i16]), Vec4::from([-1i16, -2i16, -3i16, -4i16]));
-
-        assert_eq!(-Vec1::from([1i8 ]),                   Vec1::from([-1i8 ]));
-        assert_eq!(-Vec2::from([1i8 , 2i8 ]),             Vec2::from([-1i8 , -2i8 ]));
-        assert_eq!(-Vec3::from([1i8 , 2i8 , 3i8 ]),       Vec3::from([-1i8 , -2i8 , -3i8 ]));
-        assert_eq!(-Vec4::from([1i8 , 2i8 , 3i8 , 4i8 ]), Vec4::from([-1i8 , -2i8 , -3i8 , -4i8 ]));
+    /// Test that Vec::new should work with or without the size specified
+    fn test_new() {
+        assert_eq!(Vec1::new([1f64]),                   Vec::new([1f64]));
+        assert_eq!(Vec2::new([1f64, 2f64]),             Vec::new([1f64, 2f64]));
+        assert_eq!(Vec3::new([1f64, 2f64, 3f64]),       Vec::new([1f64, 2f64, 3f64]));
+        assert_eq!(Vec4::new([1f64, 2f64, 3f64, 4f64]), Vec::new([1f64, 2f64, 3f64, 4f64]));
     }
 
     #[test]
+    /// Test the unary `-` operator
+    fn test_vec_neg() {
+        assert_eq!(-Vec1::new([1f64]),                   Vec1::new([-1f64]));
+        assert_eq!(-Vec2::new([1f64, 2f64]),             Vec2::new([-1f64, -2f64]));
+        assert_eq!(-Vec3::new([1f64, 2f64, 3f64]),       Vec3::new([-1f64, -2f64, -3f64]));
+        assert_eq!(-Vec4::new([1f64, 2f64, 3f64, 4f64]), Vec4::new([-1f64, -2f64, -3f64, -4f64]));
+
+        assert_eq!(-Vec1::new([1f32]),                   Vec1::new([-1f32]));
+        assert_eq!(-Vec2::new([1f32, 2f32]),             Vec2::new([-1f32, -2f32]));
+        assert_eq!(-Vec3::new([1f32, 2f32, 3f32]),       Vec3::new([-1f32, -2f32, -3f32]));
+        assert_eq!(-Vec4::new([1f32, 2f32, 3f32, 4f32]), Vec4::new([-1f32, -2f32, -3f32, -4f32]));
+
+        assert_eq!(-Vec1::new([1i64]),                   Vec1::new([-1i64]));
+        assert_eq!(-Vec2::new([1i64, 2i64]),             Vec2::new([-1i64, -2i64]));
+        assert_eq!(-Vec3::new([1i64, 2i64, 3i64]),       Vec3::new([-1i64, -2i64, -3i64]));
+        assert_eq!(-Vec4::new([1i64, 2i64, 3i64, 4i64]), Vec4::new([-1i64, -2i64, -3i64, -4i64]));
+
+        assert_eq!(-Vec1::new([1i32]),                   Vec1::new([-1i32]));
+        assert_eq!(-Vec2::new([1i32, 2i32]),             Vec2::new([-1i32, -2i32]));
+        assert_eq!(-Vec3::new([1i32, 2i32, 3i32]),       Vec3::new([-1i32, -2i32, -3i32]));
+        assert_eq!(-Vec4::new([1i32, 2i32, 3i32, 4i32]), Vec4::new([-1i32, -2i32, -3i32, -4i32]));
+
+        assert_eq!(-Vec1::new([1i16]),                   Vec1::new([-1i16]));
+        assert_eq!(-Vec2::new([1i16, 2i16]),             Vec2::new([-1i16, -2i16]));
+        assert_eq!(-Vec3::new([1i16, 2i16, 3i16]),       Vec3::new([-1i16, -2i16, -3i16]));
+        assert_eq!(-Vec4::new([1i16, 2i16, 3i16, 4i16]), Vec4::new([-1i16, -2i16, -3i16, -4i16]));
+
+        assert_eq!(-Vec1::new([1i8 ]),                   Vec1::new([-1i8 ]));
+        assert_eq!(-Vec2::new([1i8 , 2i8 ]),             Vec2::new([-1i8 , -2i8 ]));
+        assert_eq!(-Vec3::new([1i8 , 2i8 , 3i8 ]),       Vec3::new([-1i8 , -2i8 , -3i8 ]));
+        assert_eq!(-Vec4::new([1i8 , 2i8 , 3i8 , 4i8 ]), Vec4::new([-1i8 , -2i8 , -3i8 , -4i8 ]));
+    }
+
+    #[test]
+    /// Test the `!` operator
     fn test_vec_not() {
-        assert_eq!(!Vec1::from([false]),                    Vec1::from([true]));
-        assert_eq!(!Vec2::from([false, true]),              Vec2::from([true, false]));
-        assert_eq!(!Vec3::from([false, true, false]),       Vec3::from([true, false, true]));
-        assert_eq!(!Vec4::from([false, true, false, true]), Vec4::from([true, false, true, false]));
+        assert_eq!(!Vec1::new([false]),                    Vec1::new([true]));
+        assert_eq!(!Vec2::new([false, true]),              Vec2::new([true, false]));
+        assert_eq!(!Vec3::new([false, true, false]),       Vec3::new([true, false, true]));
+        assert_eq!(!Vec4::new([false, true, false, true]), Vec4::new([true, false, true, false]));
     }
 
     #[test]
     fn test_vec_add() {
-        assert_eq!(Vec1::from([1f64])+Vec1::from([2f64]), Vec1::from([3f64]));
+        assert_eq!(Vec1::new([1f64]) + Vec1::new([2f64]), Vec1::new([3f64]));
     }
+
+    #[test]
+    fn test_vec_index() {
+        let v = Vec4::new([1f64, 2f64, 3f64, 4f64]);
+        assert_eq!(v[3], 4f64);
+    }
+
+    //#[test]
+    //fn test_vec_add_scalar() {
+    //    assert_eq!(Vec1::new([1f64])+v(2f64, Vec1::new([3f64]));
+    //}
 }

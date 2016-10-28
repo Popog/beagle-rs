@@ -1,6 +1,7 @@
 //! A collection of numeric traits and functions.
 
 use std::ops::Mul;
+use std::cmp;
 use std::cmp::Ordering;
 use std::num::Wrapping;
 
@@ -39,10 +40,13 @@ impl Abs for f64 {
 
 /// Types that can be square-rooted.
 pub trait Sqrt {
+    /// The output type
+    type Output;
+
     /// Takes the square root of a number.
     ///
     /// Returns NaN if `self` is a negative number.
-    fn sqrt(self) -> Self;
+    fn sqrt(self) -> Self::Output;
 
     /// Returns the inverse of the square root of a number. i.e. the value `1/√x`.
     ///
@@ -65,11 +69,14 @@ pub trait Sqrt {
     /// assert_eq!(zero.inverse_sqrt(), std::f32::INFINITY);
     /// assert_eq!(negzero.inverse_sqrt(), std::f32::INFINITY);
     /// ```
-    fn inverse_sqrt(self) -> Self;
+    fn inverse_sqrt(self) -> Self::Output;
 }
 
 /// Types that can be square-rooted.
 impl Sqrt for f32 {
+    /// The output type
+    type Output = f32;
+
     /// Takes the square root of a number.
     ///
     /// Returns NaN if self is a negative number.
@@ -98,6 +105,9 @@ impl Sqrt for f32 {
 }
 /// Types that can be square-rooted.
 impl Sqrt for f64 {
+    /// The output type
+    type Output = f64;
+
     /// Takes the square root of a number.
     ///
     /// Returns NaN if self is a negative number.
@@ -128,98 +138,287 @@ impl Sqrt for f64 {
 
 /// Types that implment hyperbolic angle functions.
 pub trait Hyperbolic {
+    /// The output type
+    type Output;
     /// Hyperbolic sine function.
-    fn sinh(self) -> Self;
+    fn sinh(self) -> Self::Output;
     /// Hyperbolic cosine function.
-    fn cosh(self) -> Self;
+    fn cosh(self) -> Self::Output;
     /// Hyperbolic tangent function.
-    fn tanh(self) -> Self;
+    fn tanh(self) -> Self::Output;
     /// Hyperbolic sine function.
-    fn asinh(self) -> Self;
+    fn asinh(self) -> Self::Output;
     /// Hyperbolic cosine function.
-    fn acosh(self) -> Self;
+    fn acosh(self) -> Self::Output;
     /// Hyperbolic tangent function.
-    fn atanh(self) -> Self;
+    fn atanh(self) -> Self::Output;
 }
 
 /// Types that implment hyperbolic angle functions.
 impl Hyperbolic for f32 {
+    /// The output type
+    type Output = f32;
     /// Hyperbolic sine function.
-    fn sinh(self) -> Self { f32::sinh(self) }
+    fn sinh(self) -> f32 { f32::sinh(self) }
     /// Hyperbolic cosine function.
-    fn cosh(self) -> Self { f32::cosh(self) }
+    fn cosh(self) -> f32 { f32::cosh(self) }
     /// Hyperbolic tangent function.
-    fn tanh(self) -> Self { f32::tanh(self) }
+    fn tanh(self) -> f32 { f32::tanh(self) }
     /// Hyperbolic sine function.
-    fn asinh(self) -> Self { f32::asinh(self) }
+    fn asinh(self) -> f32 { f32::asinh(self) }
     /// Hyperbolic cosine function.
-    fn acosh(self) -> Self { f32::acosh(self) }
+    fn acosh(self) -> f32 { f32::acosh(self) }
     /// Hyperbolic tangent function.
-    fn atanh(self) -> Self { f32::atanh(self) }
+    fn atanh(self) -> f32 { f32::atanh(self) }
 }
 
 /// Types that implment hyperbolic angle functions.
 impl Hyperbolic for f64 {
+    /// The output type
+    type Output = f64;
     /// Hyperbolic sine function.
-    fn sinh(self) -> Self { f64::sinh(self) }
+    fn sinh(self) -> f64 { f64::sinh(self) }
     /// Hyperbolic cosine function.
-    fn cosh(self) -> Self { f64::cosh(self) }
+    fn cosh(self) -> f64 { f64::cosh(self) }
     /// Hyperbolic tangent function.
-    fn tanh(self) -> Self { f64::tanh(self) }
+    fn tanh(self) -> f64 { f64::tanh(self) }
     /// Hyperbolic sine function.
-    fn asinh(self) -> Self { f64::asinh(self) }
+    fn asinh(self) -> f64 { f64::asinh(self) }
     /// Hyperbolic cosine function.
-    fn acosh(self) -> Self { f64::acosh(self) }
+    fn acosh(self) -> f64 { f64::acosh(self) }
     /// Hyperbolic tangent function.
-    fn atanh(self) -> Self { f64::atanh(self) }
+    fn atanh(self) -> f64 { f64::atanh(self) }
 }
 
 /// Types that implement the Pow function
 pub trait Pow<Rhs> {
+    /// The output type
+    type Output;
     /// Returns `self` raised to the power `rhs`
-    fn pow(self, rhs: Rhs) -> Self;
+    fn pow(self, rhs: Rhs) -> Self::Output;
 }
 
 /// Types that implement the Pow function
 impl Pow<f32> for f32 {
+    /// The output type
+    type Output = f32;
     /// Returns `self` raised to the power `rhs`
-    fn pow(self, rhs: f32) -> Self { f32::powf(self, rhs) }
+    fn pow(self, rhs: f32) -> f32 { f32::powf(self, rhs) }
 }
 
 /// Types that implement the Pow function
 impl Pow<i32> for f32 {
+    /// The output type
+    type Output = f32;
     /// Returns `self` raised to the power `rhs`
-    fn pow(self, rhs: i32) -> Self { f32::powi(self, rhs) }
+    fn pow(self, rhs: i32) -> f32 { f32::powi(self, rhs) }
 }
 
 /// Types that implement the Pow function
 impl Pow<f64> for f64 {
+    /// The output type
+    type Output = f64;
     /// Returns `self` raised to the power `rhs`
-    fn pow(self, rhs: f64) -> Self { f64::powf(self, rhs) }
+    fn pow(self, rhs: f64) -> f64 { f64::powf(self, rhs) }
 }
 
 /// Types that implement the Pow function
 impl Pow<i32> for f64 {
+    /// The output type
+    type Output = f64;
     /// Returns `self` raised to the power `rhs`
-    fn pow(self, rhs: i32) -> Self { f64::powi(self, rhs) }
+    fn pow(self, rhs: i32) -> f64 { f64::powi(self, rhs) }
 }
+
+/// Types that implement exponential functions
+pub trait Exp {
+    /// The output type
+    type Output;
+    /// Returns `e^(self)`, (the exponential function).
+    fn exp(self) -> Self::Output;
+    /// Returns `2^(self)`.
+    fn exp2(self) -> Self::Output;
+    /// Returns the natural logarithm of the number.
+    fn ln(self) -> Self::Output;
+    /// Returns the base 2 logarithm of the number.
+    fn log2(self) -> Self::Output;
+    /// Returns the base 10 logarithm of the number.
+    fn log10(self) -> Self::Output;
+}
+
+/// Types that implement exponential functions
+impl Exp for f32 {
+    /// The output type
+    type Output = f32;
+    /// Returns `e^(self)`, (the exponential function).
+    fn exp(self) -> f32 { f32::exp(self) }
+    /// Returns `2^(self)`.
+    fn exp2(self) -> f32 { f32::exp2(self) }
+    /// Returns the natural logarithm of the number.
+    fn ln(self) -> f32 { f32::ln(self) }
+    /// Returns the base 2 logarithm of the number.
+    fn log2(self) -> f32 { f32::log2(self) }
+    /// Returns the base 10 logarithm of the number.
+    fn log10(self) -> f32 { f32::log10(self) }
+}
+
+/// Types that implement exponential functions
+impl Exp for f64 {
+    /// The output type
+    type Output = f64;
+    /// Returns `e^(self)`, (the exponential function).
+    fn exp(self) -> f64 { f64::exp(self) }
+    /// Returns `2^(self)`.
+    fn exp2(self) -> f64 { f64::exp2(self) }
+    /// Returns the natural logarithm of the number.
+    fn ln(self) -> f64 { f64::ln(self) }
+    /// Returns the base 2 logarithm of the number.
+    fn log2(self) -> f64 { f64::log2(self) }
+    /// Returns the base 10 logarithm of the number.
+    fn log10(self) -> f64 { f64::log10(self) }
+}
+
+/// Types that can be rounded.
+pub trait Round {
+    /// The output type
+    type Output;
+    /// Returns the largest integer less than or equal to a number.
+    fn floor(self) -> Self::Output;
+    /// Returns the smallest integer greater than or equal to a number.
+    fn ceil(self) -> Self::Output;
+    /// Returns the integer part of a number.
+    fn trunc(self) -> Self::Output;
+    /// Returns the fractional part of a number.
+    fn fract(self) -> Self::Output;
+    /// Returns the nearest integer to a number. Round half-way cases away from 0.0.
+    fn round(self) -> Self::Output;
+}
+
+/// Types that can be rounded.
+impl Round for f32 {
+    /// The output type
+    type Output = f32;
+    /// Returns the largest integer less than or equal to a number.
+    fn floor(self) -> f32 { f32::floor(self) }
+    /// Returns the smallest integer greater than or equal to a number.
+    fn ceil(self) -> f32 { f32::ceil(self) }
+    /// Returns the integer part of a number.
+    fn trunc(self) -> f32 { f32::trunc(self) }
+    /// Returns the fractional part of a number.
+    fn fract(self) -> f32 { f32::fract(self) }
+    /// Returns the nearest integer to a number. Round half-way cases away from 0.0.
+    fn round(self) -> f32 { f32::round(self) }
+}
+
+/// Types that can be rounded.
+impl Round for f64 {
+    /// The output type
+    type Output = f64;
+    /// Returns the largest integer less than or equal to a number.
+    fn floor(self) -> f64 { f64::floor(self) }
+    /// Returns the smallest integer greater than or equal to a number.
+    fn ceil(self) -> f64 { f64::ceil(self) }
+    /// Returns the integer part of a number.
+    fn trunc(self) -> f64 { f64::trunc(self) }
+    /// Returns the fractional part of a number.
+    fn fract(self) -> f64 { f64::fract(self) }
+    /// Returns the nearest integer to a number. Round half-way cases away from 0.0.
+    fn round(self) -> f64 { f64::round(self) }
+}
+
+/// Types that can be clamped
+pub trait Clamp<Rhs = Self>: Sized {
+    /// The output type
+    type Output;
+    /// Returns the minimum of the two numbers.
+    /// If one of the arguments is NaN, then the other argument is returned.
+    fn min(self, rhs: Rhs) -> Self::Output;
+    /// Returns the minimum of the two numbers.
+    /// If one of the arguments is NaN, then the other argument is returned.
+    fn max(self, rhs: Rhs) -> Self::Output;
+}
+
+/// Returns the value of `self` constrained to the range [min_val, max_val]
+/// The returned value is computed as min(max(self, min_val), mal_val).
+//fn clamp<V, L, H> (v: V, min_val: L, max_val: H) -> Self::Output {
+//    Self::min(Self::max(self, min_val), max_val)
+//}
+
+/// Types that can be clamped
+impl Clamp for f32 {
+    /// The output type
+    type Output = f32;
+    /// Returns the minimum of the two numbers.
+    /// If one of the arguments is NaN, then the other argument is returned.
+    fn min(self, rhs: f32) -> f32 { f32::min(self, rhs) }
+    /// Returns the minimum of the two numbers.
+    /// If one of the arguments is NaN, then the other argument is returned.
+    fn max(self, rhs: f32) -> f32 { f32::max(self, rhs) }
+}
+
+/// Types that can be clamped
+impl Clamp for f64 {
+    /// The output type
+    type Output = f64;
+    /// Returns the minimum of the two numbers.
+    /// If one of the arguments is NaN, then the other argument is returned.
+    fn min(self, rhs: f64) -> f64 { f64::min(self, rhs) }
+    /// Returns the minimum of the two numbers.
+    /// If one of the arguments is NaN, then the other argument is returned.
+    fn max(self, rhs: f64) -> f64 { f64::max(self, rhs) }
+}
+
+macro_rules! clamp_impl {
+    ($($x:ident)*) => {
+$(/// Types that can be clamped
+impl Clamp for $x {
+    /// The output type
+    type Output = $x;
+    /// Returns the minimum of the two numbers.
+    /// If one of the arguments is NaN, then the other argument is returned.
+    fn min(self, rhs: $x) -> $x { cmp::min(self, rhs) }
+    /// Returns the minimum of the two numbers.
+    /// If one of the arguments is NaN, then the other argument is returned.
+    fn max(self, rhs: $x) -> $x { cmp::max(self, rhs) }
+})*
+    };
+}
+
+clamp_impl!{i8 i16 i32 i64 u8 u16 u32 u64}
+
+/// Types which can be mixed
+pub trait Mix<A> {
+    /// performs a linear interpolation between a number and y using `a` to weight between them.
+    /// For non-boolean `a`, the return value is computed as `x×(1−a)+y×a×x×(1−a)+y×a`.
+    /// For boolean `a`, the return value is composed of selected components of `x` and `y`.
+    /// False components of `a` select the corresponding component of `x`. True componenets
+    /// of `a` select the corresponding components of 'y'.
+    fn mix(x: Self, y: Self, a: A);
+}
+
 
 /// Types that can have the reciprocal taken.
 pub trait Recip {
+    /// The output type
+    type Output;
     /// Takes the reciprocal (inverse) of a number, `1/x`.
-    fn recip(self) -> Self;
+    fn recip(self) -> Self::Output;
 }
 
 /// Types that can have the reciprocal taken.
 impl Recip for f32 {
+    /// The output type
+    type Output = f32;
     /// Takes the reciprocal (inverse) of a number, `1/x`.
-    fn recip(self) -> Self { f32::recip(self) }
+    fn recip(self) -> f32 { f32::recip(self) }
 }
 
 /// Types that can have the reciprocal taken.
 impl Recip for f64 {
+    /// The output type
+    type Output = f64;
     /// Takes the reciprocal (inverse) of a number, `1/x`.
-    fn recip(self) -> Self { f64::recip(self) }
+    fn recip(self) -> f64 { f64::recip(self) }
 }
 
 /// Types that can be sign functions.
