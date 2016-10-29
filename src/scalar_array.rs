@@ -6,7 +6,7 @@ use std::borrow::{Borrow,BorrowMut};
 use std::cmp::Ordering;
 use std::ops::{
     Deref,DerefMut,
-    Add,Mul,MulAssign
+    Add,Mul,MulAssign,
 };
 use std::mem::{forget,replace,uninitialized};
 
@@ -253,8 +253,8 @@ Self::Dim: TwoDimMut<Self::Scalar, Self::Row>,
 
 /// Helpers for 1d arrays
 pub mod vec_array {
-    use super::{Array,Dim};
-    use std::ops::{Add, Mul};
+    use super::{Array,Dim,CustomArrayThree};
+    use std::ops::{Add, Mul, Sub};
 
     /// Fold all the elements in a 1d array. The first element is mapped with `f0`,
     /// then folding continues with `f` for other elements.
@@ -336,6 +336,36 @@ pub mod vec_array {
             },
         )
     }
+
+    /// Fold all the elements in a 1d array. The first element is mapped with `f0`,
+    /// then folding continues with `f` for other elements.
+    #[inline(always)]
+    pub fn cross<S, T>(mut s: CustomArrayThree<S>, mut t: CustomArrayThree<T>) -> CustomArrayThree<S::Output>
+    where S: Clone+Mul<T>,
+    T: Clone,
+    S::Output: Sub<Output=S::Output>, {
+        use std::mem::{replace,uninitialized,forget};
+        let (s0, s1, s2) = unsafe {(
+            replace(&mut s[0], uninitialized()),
+            replace(&mut s[1], uninitialized()),
+            replace(&mut s[2], uninitialized()),
+        )};
+        let (t0, t1, t2) = unsafe {(
+            replace(&mut t[0], uninitialized()),
+            replace(&mut t[1], uninitialized()),
+            replace(&mut t[2], uninitialized()),
+        )};
+        forget(s);
+        forget(t);
+        let (sb0, sb1, sb2) = (s0.clone(), s1.clone(), s2.clone());
+        let (tb0, tb1, tb2) = (t0.clone(), t1.clone(), t2.clone());
+        CustomArrayThree([
+            s1*t2 - sb2*tb1,
+            s2*t0 - sb0*tb2,
+            s0*t1 - sb1*tb0,
+        ])
+    }
+
 }
 
 /// Helpers for 2d arrays
@@ -707,6 +737,23 @@ F: FnMut(O, S::Scalar, T::Scalar) -> O,
 <S::Dim as DimHasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<T::Scalar>>::Type>,
 {
     array::fold_zip::<S::Scalar, S::Row, S::Dim, T::Scalar, F0, F, O>(s.get_val(), t.get_val(), f0, f)
+}
+
+/// Fold all the scalars in two ScalarArrays. The first elements are mapped with `f0`,
+/// then folding continues with `f` for other elements.
+#[inline(always)]
+pub fn fold_zip_ref<'a, S, T, F0, F, O>(s: &'a S, t: &'a T, f0: F0, f: F) -> O
+where S: ScalarArrayRef,
+S::Row: DimRef<S::Scalar> + DimRef<T::Scalar>,
+S::Dim: TwoDimRef<S::Scalar, S::Row> + TwoDimRef<T::Scalar, S::Row>,
+T: ScalarArrayRef<Row=S::Row, Dim=S::Dim>,
+F0: FnOnce(&'a S::Scalar, &'a T::Scalar) -> O,
+F: FnMut(O, &'a S::Scalar, &'a T::Scalar) -> O,
+// TODO: remove elaborted bounds. Blocked on rust/issues#20671
+<S::Row as DimHasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar> + Array<&'a S::Scalar> + Array<&'a T::Scalar>,
+<S::Dim as DimHasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<T::Scalar>>::Type> + Array<<S::Row as Array<&'a S::Scalar>>::Type> + Array<<S::Row as Array<&'a T::Scalar>>::Type>,
+{
+    array::fold_zip::<&'a S::Scalar, S::Row, S::Dim, &'a T::Scalar, F0, F, O>(s.get_ref(), t.get_ref(), f0, f)
 }
 
 

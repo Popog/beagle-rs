@@ -17,7 +17,7 @@
 //! assert_eq!(v1+v2, Vec3::new([9f32, 14f32, 18f32]));
 //! ```
 
-use std::mem::transmute;
+//use std::mem::transmute;
 use std::ops::{
     Neg,Not,
     BitAnd,BitOr,BitXor,
@@ -29,18 +29,24 @@ use std::ops::{
     Deref,DerefMut,
 };
 
-use super::Value;
+use super::{Value,v};
 use mat::Mat;
-use num::Sqrt;
+use num::{ApproxZero,Sign,Sqrt};
 use scalar_array::{
     Array,Dim,DimHasSmaller,DimRef,DimMut,TwoDim,
     ScalarArray,ScalarArrayVal,ScalarArrayRef,ScalarArrayMut,
     VecArrayVal,VecArrayRef,
     ConcreteScalarArray,HasConcreteScalarArray,ConcreteVecArray,HasConcreteVecArray,
-    One,Two,Three,Four,CustomArrayOne
+    One,Two,Three,Four,CustomArrayOne,
 };
-use scalar_array::{apply_zip_mut_val,fold,fold_ref,map,map_zip,mul_vector_transpose};
+use scalar_array::{
+    apply_zip_mut_val,
+    fold,fold_ref,fold_zip,fold_zip_ref,
+    map,map_zip,
+    mul_vector_transpose
+};
 use scalar_array::vec_array;
+use utils::RefCast;
 
 /// An array of Scalars, written `Vec<D, V>` but pronounced 'vector'.
 ///
@@ -71,14 +77,26 @@ where D::Smaller: Array<S>,
     where S: Clone {
         Vec::from_vec_val(D::from_value(s))
     }
+}
 
-    //pub fn safe_transmute(v: &D::Type) -> &Vec<D, S> {
-    //    unsafe { transmute(v) }
-    //}
-
-    //pub fn safe_transmute_mut(v: &mut D::Type) -> &mut Self {
-    //    unsafe { transmute(v) }
-    //}
+impl<S, D: Dim<S>> RefCast<D::Type> for Vec<D, S>
+// TODO: remove elaborted bounds. Blocked on rust/issues#20671
+where D::Smaller: Array<S>,
+{
+    fn from_ref(v: &D::Type) -> &Self {
+        let ptr = v as *const _ as *const Vec<D, S>;
+        unsafe { &*ptr }
+    }
+    fn from_mut(v: &mut D::Type) -> &mut Self {
+        let ptr = v as *mut _ as *mut Vec<D, S>;
+        unsafe { &mut*ptr }
+    }
+    fn into_ref(&self) -> &D::Type {
+        &self.0
+    }
+    fn into_mut(&mut self) -> &D::Type {
+        &mut self.0
+    }
 }
 
 impl<S, D: Dim<S>> Deref for Vec<D, S>
@@ -201,8 +219,6 @@ where D::Smaller: Array<S>
     fn from_vec_val(v: D::Type) -> Self { Vec(v) }
 }
 
-//impl<S> Vec3Array for Vec3<S> {}
-
 
 /// Multiply two Vectors component-wise, summing the results. Known as a dot product.
 pub fn dot<S, T>(s: S, t: T) -> <S::Scalar as Mul<T::Scalar>>::Output
@@ -239,10 +255,9 @@ S::Scalar: Mul+Clone,
     length2(s).sqrt()
 }
 
-/// Returns an approximated normalized version of `v`. This is faster than just `v / v.length()`
-/// as it avoids division by using fast inverse square root.
-pub fn normalize<S>(s: S) -> <S as Mul<<<S::Scalar as Mul>::Output as Sqrt>::Output>>::Output
-where S: VecArrayRef + Mul<<<<S as ScalarArray>::Scalar as Mul>::Output as Sqrt>::Output>,
+/// Returns an approximated normalized version of `s`. This is generally faster than normalize_exact.
+pub fn normalize<S>(s: S) -> <S as Mul<Value<<<S::Scalar as Mul>::Output as Sqrt>::Output>>>::Output
+where S: VecArrayRef + Mul<Value<<<<S as ScalarArray>::Scalar as Mul>::Output as Sqrt>::Output>>,
 S::Scalar: Mul+Clone,
 <S::Scalar as Mul>::Output: Add<Output=<S::Scalar as Mul>::Output> + Sqrt,
 S::Row: DimRef<S::Scalar>,
@@ -250,9 +265,131 @@ S::Row: DimRef<S::Scalar>,
 for<'a> <S::Row as DimHasSmaller>::Smaller: Array<S::Scalar> + Array<&'a S::Scalar>,
 {
     let length2 = fold_ref(&s, |s| s.clone()*s.clone(), |init, s| init + (s.clone() * s.clone()));
-    s * length2.inverse_sqrt()
+    s * v(length2.inverse_sqrt())
 }
 
+/// Returns an exact normalized version of `s`. Basically `v / v.length()`
+pub fn normalize_exact<S>(s: S) -> <S as Div<Value<<<S::Scalar as Mul>::Output as Sqrt>::Output>>>::Output
+where S: VecArrayRef + Div<Value<<<<S as ScalarArray>::Scalar as Mul>::Output as Sqrt>::Output>>,
+S::Scalar: Mul+Clone,
+<S::Scalar as Mul>::Output: Add<Output=<S::Scalar as Mul>::Output> + Sqrt,
+S::Row: DimRef<S::Scalar>,
+// TODO: remove elaborted bounds. Blocked on rust/issues#20671
+for<'a> <S::Row as DimHasSmaller>::Smaller: Array<S::Scalar> + Array<&'a S::Scalar>,
+{
+    let length2 = fold_ref(&s, |s| s.clone()*s.clone(), |init, s| init + (s.clone() * s.clone()));
+    s / v(length2.sqrt())
+}
+
+/// Returns the distance squared between `lhs` and `rhs`.
+pub fn distance2<S, T>(s: S, t: T) -> <<S::Scalar as Sub<T::Scalar>>::Output as Mul>::Output
+where S: VecArrayVal,
+S::Row: Dim<T::Scalar>,
+T: VecArrayVal<Row=<S as ScalarArray>::Row>,
+S::Scalar: Sub<T::Scalar>,
+<S::Scalar as Sub<T::Scalar>>::Output: Mul + Clone,
+<<S::Scalar as Sub<T::Scalar>>::Output as Mul>::Output: Add<Output=<<S::Scalar as Sub<T::Scalar>>::Output as Mul>::Output>,
+// TODO: remove elaborted bounds. Blocked on rust/issues#20671
+<S::Row as DimHasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar>,
+{
+    fold_zip(s, t,
+        |s, t| {
+            let v = s - t;
+            (v.clone() * v)
+        },
+        |init, s, t| {
+            let v = s - t;
+            init + (v.clone() * v)
+        }
+    )
+}
+
+/// Returns the distance between `lhs` and `rhs`.
+pub fn distance<S, T>(s: S, t: T) -> <<<S::Scalar as Sub<T::Scalar>>::Output as Mul>::Output as Sqrt>::Output
+where S: VecArrayVal,
+S::Row: Dim<T::Scalar>,
+T: VecArrayVal<Row=<S as ScalarArray>::Row>,
+S::Scalar: Sub<T::Scalar>,
+<S::Scalar as Sub<T::Scalar>>::Output: Mul + Clone,
+<<S::Scalar as Sub<T::Scalar>>::Output as Mul>::Output: Add<Output=<<S::Scalar as Sub<T::Scalar>>::Output as Mul>::Output> + Sqrt,
+// TODO: remove elaborted bounds. Blocked on rust/issues#20671
+<S::Row as DimHasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar>,
+{
+    distance2(s, t).sqrt()
+}
+
+/// Returns the cross product of `s` and `t`.
+pub fn cross<S, T>(s: S, t: T) -> S::Concrete
+where S: VecArrayVal<Row=Three> + HasConcreteVecArray<<<S as ScalarArray>::Scalar as Mul<T::Scalar>>::Output, Three>,
+T: VecArrayVal<Row=Three>,
+S::Scalar: Clone+Mul<T::Scalar>,
+T::Scalar: Clone,
+// TODO: remove elaborted bounds. Blocked on rust/issues#20671
+<S::Scalar as Mul<T::Scalar>>::Output: Sub<Output=<S::Scalar as Mul<T::Scalar>>::Output>,
+<S as HasConcreteScalarArray<<S::Scalar as Mul<T::Scalar>>::Output, Three, One>>::Concrete: ConcreteVecArray,
+{
+    S::Concrete::from_vec_val(vec_array::cross(s.get_vec_val(), t.get_vec_val()))
+}
+
+/// Returns `cos²(θ) < ε²`, where `θ` = the angle between `a` and `b`.
+pub fn is_perpendicular<S, T>(s: S, t: T, epsilon_squared: &ApproxZero<<<S::Scalar as Mul>::Output as Mul<<T::Scalar as Mul>::Output>>::Output>) -> bool
+where S: VecArrayVal,
+S::Row: Dim<T::Scalar>,
+T: VecArrayVal<Row=<S as ScalarArray>::Row>,
+S::Scalar: Mul + Mul<T::Scalar> + Clone,
+<S::Scalar as Mul>::Output: Add<Output=<S::Scalar as Mul>::Output> + Mul<<T::Scalar as Mul>::Output>,
+<S::Scalar as Mul<T::Scalar>>::Output: Add<Output=<S::Scalar as Mul<T::Scalar>>::Output> + Mul<Output=<<S::Scalar as Mul>::Output as Mul<<T::Scalar as Mul>::Output>>::Output> + Clone,
+T::Scalar: Mul + Clone,
+<T::Scalar as Mul>::Output: Add<Output=<T::Scalar as Mul>::Output>,
+// TODO: remove elaborted bounds. Blocked on rust/issues#20671
+<S::Row as DimHasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar>,
+{
+    let (s_dot_t, s_length2, t_length2) = fold_zip(s, t,
+        |s, t| (s.clone()*t.clone(), s.clone()*s, t.clone()*t),
+        |(st, ss, tt), s, t|(st + s.clone()*t.clone(), ss + s.clone()*s, tt + t.clone()*t),
+    );
+
+    // We're looking to return abs(cos(θ)) <= ε
+    // Proof:
+    // ∵                 a·b  =  |a|*|b|*cos(θ)
+    // ∵            cos²(θ)  <=  ε²
+    //     |a|²*|b|²*cos²(θ) <=  |a|²*|b|²*ε²
+    //   (|a|*|b|*|cos(θ)|)² <=  |a|²*|b|²*ε²
+    //                (a·b)² <=  |a|²*|b|²*ε²
+    // ∴  (a·b)² / |a|²*|b|² <=  ε²
+    //let a_dot_b = a.dot(b);
+    epsilon_squared.approx_zero_ratio(s_dot_t.clone() * s_dot_t, s_length2 * t_length2)
+}
+
+
+/// Returns `n` if `nref.dot(i)` is negative, else `-n`.
+pub fn faceforward<N, I, NRef>(n: N, i: I, nref: NRef) -> N
+where N: Neg<Output=N>,
+NRef: VecArrayVal,
+NRef::Row: Dim<I::Scalar>,
+I: VecArrayVal<Row=NRef::Row>,
+NRef::Scalar: Mul<I::Scalar>,
+<NRef::Scalar as Mul<I::Scalar>>::Output: Add<Output=<NRef::Scalar as Mul<I::Scalar>>::Output> + Sign<Output=bool>,
+// TODO: remove elaborted bounds. Blocked on rust/issues#20671
+<NRef::Row as DimHasSmaller>::Smaller: Array<NRef::Scalar> + Array<I::Scalar>,
+{
+    if dot(nref, i).is_negative() { n } else { -n }
+}
+
+/// Reflects `i` against `n` as `i - n * dot(i,n) * 2`.
+pub fn reflect<N, I>(i: I, n: N) -> I::Output
+where I: VecArrayRef + Sub<N::Output>,
+I::Row: DimRef<I::Scalar> + DimRef<N::Scalar>,
+N: VecArrayRef<Row=<I as ScalarArray>::Row> + Mul<Value<<<I as ScalarArray>::Scalar as Mul<<N as ScalarArray>::Scalar>>::Output>>,
+I::Scalar: Mul<N::Scalar> + Clone,
+N::Scalar: Clone,
+<I::Scalar as Mul<N::Scalar>>::Output: Add<Output=<I::Scalar as Mul<N::Scalar>>::Output> + Clone,
+// TODO: remove elaborted bounds. Blocked on rust/issues#20671
+for<'a> <I::Row as DimHasSmaller>::Smaller: Array<I::Scalar> + Array<&'a I::Scalar> + Array<N::Scalar> + Array<&'a N::Scalar>
+{
+    let i_dot_n = fold_zip_ref(&i, &n, |i, n| i.clone()*n.clone(), |init, i, n| init + (i.clone() * n.clone()));
+    i - n * v(i_dot_n.clone() + i_dot_n)
+}
 
 // TODO: geometric functions
 // refraction vector
@@ -388,7 +525,32 @@ D::Smaller: Array<S> + Array<<C as Array<S>>::Type> + Array<<C as Array<T>>::Typ
 
 #[cfg(test)]
 mod tests {
+    use std::mem::size_of;
     use super::*;
+
+    #[test]
+    /// Test that Vec sizes are what they should be
+    fn test_sizes() {
+        assert_eq!(size_of::<[i32;1]>(), size_of::<Vec1<i32>>());
+        assert_eq!(size_of::<[i32;2]>(), size_of::<Vec2<i32>>());
+        assert_eq!(size_of::<[i32;3]>(), size_of::<Vec3<i32>>());
+        assert_eq!(size_of::<[i32;4]>(), size_of::<Vec4<i32>>());
+
+        assert_eq!(size_of::<[usize;1]>(), size_of::<Vec1<usize>>());
+        assert_eq!(size_of::<[usize;2]>(), size_of::<Vec2<usize>>());
+        assert_eq!(size_of::<[usize;3]>(), size_of::<Vec3<usize>>());
+        assert_eq!(size_of::<[usize;4]>(), size_of::<Vec4<usize>>());
+
+        assert_eq!(size_of::<[f64;1]>(), size_of::<Vec1<f64>>());
+        assert_eq!(size_of::<[f64;2]>(), size_of::<Vec2<f64>>());
+        assert_eq!(size_of::<[f64;3]>(), size_of::<Vec3<f64>>());
+        assert_eq!(size_of::<[f64;4]>(), size_of::<Vec4<f64>>());
+
+        assert_eq!(size_of::<[bool;1]>(), size_of::<Vec1<bool>>());
+        assert_eq!(size_of::<[bool;2]>(), size_of::<Vec2<bool>>());
+        assert_eq!(size_of::<[bool;3]>(), size_of::<Vec3<bool>>());
+        assert_eq!(size_of::<[bool;4]>(), size_of::<Vec4<bool>>());
+    }
 
     #[test]
     /// Test that Vec::new should work with or without the size specified

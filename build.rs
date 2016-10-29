@@ -7,7 +7,6 @@ mod build_scalar_array;
 fn main() {
     let out_dir = env::var("OUT_DIR").unwrap();
 
-    build_scalar_array::main(&out_dir);
     build_index::main(&out_dir);
     build_mat::main(&out_dir);
 }

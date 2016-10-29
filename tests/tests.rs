@@ -3,6 +3,7 @@ extern crate beagle;
 use beagle::scalar_array::transpose;
 use beagle::mat::{Mat3x4,Mat4x3};
 
+
 #[test]
 fn transpose_test() {
     let m = Mat4x3::new([

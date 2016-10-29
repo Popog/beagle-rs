@@ -15,6 +15,8 @@ pub mod scalar_array;
 pub mod vec;
 pub mod num;
 
+mod utils;
+
 /// A simple wrapper to allow generic scalar binary ops
 ///
 /// There's generally no reason to store this type, just create it with `v` for use in expressions.

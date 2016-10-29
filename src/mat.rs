@@ -50,6 +50,8 @@ use scalar_array::{
     One,Two,Three,Four,
     apply_zip_mut_val,map,map_zip,mul_vector,mul_matrix,
 };
+use scalar_array::array;
+use utils::RefCast;
 use vec::Vec;
 
 /// An row-major array of vectors, written `Mat<R, C, T>` but pronounced 'matrix'.
@@ -148,11 +150,10 @@ R::Smaller: Array<<C as Array<S>>::Type>,
     type Output = Vec<C, S>;
     #[inline(always)]
     fn index(&self, i: usize) -> &Vec<C, S> {
-        Vec::safe_transmute(&self.0.as_ref()[i])
+        RefCast::from_ref(&self.0.as_ref()[i])
     }
 }
 
-/*
 impl<S, C: Dim<S>, R: TwoDim<S, C>> IndexMut<usize> for Mat<R, C, S>
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
 where C::Smaller: Array<S>,
@@ -160,7 +161,7 @@ R::Smaller: Array<<C as Array<S>>::Type>,
 {
     #[inline(always)]
     fn index_mut(&mut self, i: usize) -> &mut Vec<C, S> {
-        Vec::safe_transmute_mut(&mut self.0.as_mut()[i])
+        RefCast::from_mut(&mut self.0.as_mut()[i])
     }
 }
 
@@ -173,7 +174,6 @@ R::Smaller: Array<<C as Array<S>>::Type>,
     type Row = C;
     type Dim = R;
 }
-*/
 
 impl<S, C: Dim<S>, R: TwoDim<S, C>> ScalarArrayVal for Mat<R, C, S>
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
@@ -231,31 +231,31 @@ impl<S, C: Dim<S>, R: TwoDim<S, C>> Mat<R, C, S>
 where C::Smaller: Array<S>,
 R::Smaller: Array<<C as Array<S>>::Type>,
 {
-    /*
-
-    #[inline(always)]
-    fn mul_matrix<U: Scalar, C2: Dim<U>>(&self, rhs: &Mat<C, C2, U>) -> Mat<R, C2, <T as Mul<U>>::Output>
-    where R: Dim<Vec<C2,<T as Mul<U>>::Output>>,
-    C: Dim<Vec<C2,U>>,
-    C2: Dim<<T as Mul<U>>::Output>,
-    T: Mul<U>,
-    <T as Mul<U>>::Output: Scalar+Add<Output=<T as Mul<U>>::Output> {
-        Mat(<R as Dim<Vec<C2, <T as Mul<U>>::Output>>>::from_iter(self.into_iter().map(|lhs_row: &Vec<C, T>| rhs.mul_vector_transpose(lhs_row))))
-    }
-
     /// Constructs a matrix via the outer product of `lhs` and `rhs`.
     #[inline]
-    pub fn outer_product<Rhs: Scalar, Lhs: Scalar+Mul<Rhs, Output=T>>(lhs: &Vec<C, Lhs>, rhs: &Vec<R, Rhs>) -> Self
-    where C: Dim<Lhs>,
-    R: Dim<Rhs> {
-        Mat::new(<R as Dim<Vec<C, T>>>::from_iter(rhs.into_iter().map(|&r| lhs * r)))
+    pub fn outer_product<Lhs, Rhs>(lhs: Lhs, rhs: Rhs) -> Self
+    where C: Dim<Lhs::Scalar> + Array<Rhs::Scalar>,
+    R: Dim<Rhs::Scalar> + Array<<C as Array<Lhs::Scalar>>::Type> + Array<<C as Array<Rhs::Scalar>>::Type>,
+    <C as Array<Lhs::Scalar>>::Type: Clone,
+    Lhs: VecArrayVal<Row=C>,
+    Rhs: VecArrayVal<Row=R>,
+    Lhs::Scalar: Mul<Rhs::Scalar, Output=S>,
+    Rhs::Scalar: Clone,
+    // TODO: remove elaborted bounds. Blocked on rust/issues#20671
+    C::Smaller: Array<Lhs::Scalar>,
+    R::Smaller: Array<Rhs::Scalar>,
+    {
+        let lhs = <R as Array<<C as Array<Lhs::Scalar>>::Type>>::from_value(lhs.get_vec_val());
+        let rhs = <R as Array<Rhs::Scalar>>::map(rhs.get_vec_val(), |rhs| C::from_value(rhs));
+
+        Mat::from_val(array::map_zip::<Lhs::Scalar, C, R, _, _, _>(lhs, rhs, |lhs, rhs| lhs * rhs))
     }
 
     // TODO: Matrix functions
     // inverse
     //  matN inverse(matN m)
-    */
 }
+
 macro_rules! impl_mat_unop {
     ($($trait_name:ident::$method_name:ident)+) => {$(
 impl<S, C: Dim<S>, R: TwoDim<S, C>> $trait_name for Mat<R, C, S>

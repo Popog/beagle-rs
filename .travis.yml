@@ -1,10 +1,6 @@
-sudo: false
 language: rust
 rust:
 - nightly
-matrix:
-  allow_failures:
-- rust: nightly
 before_script:
 - |
   pip install 'travis-cargo<0.2' --user &&
@@ -14,10 +10,11 @@ script:
   travis-cargo build &&
   travis-cargo test &&
   travis-cargo bench &&
-  travis-cargo --only stable doc
+  travis-cargo doc
 after_success:
 - travis-cargo doc-upload
 env:
   global:
+    # override the default `--features unstable` used for the nightly branch (optional)
   - TRAVIS_CARGO_NIGHTLY_FEATURE=""
   - secure: aHmAyRFYc1ZeJoM9YnJ4x3RdVUHL2sNZh8onJaTpIwKVtrNgjb/xh/QZ8Lv5F9x9uGziOzE1Z4CmhEJ8eb13Vg3IwqSV24HgaWK6/bXIeUCTj4X9IKfngwfRI2DxzYlF/zX11+NjtOmYInFx8zxhAJWXqdIzwBfSofGqcvXFEYmLkwPlmqnY1tj5nlBWy69EGGN+36Nic+6rBRkVETso4xwIBgnaLM73QfNlNATOCBWgHux8JKBTjv3QHxmzFmGDyJFAVKLKPTpzfNiBbNg2XSck6E9kaUui7ks4ImZaDEMmZlgaermZcwFH32IyFdZ2UUmIwBZ7CHAAIfM3vW8FYWjommNy+kzIJoNBeyVZrKlsx5Dd722Q8U5scfGKBzVa7qMl6q6Tftar0l70J4cvIjp8cU6vPmZTK0YNkUnNWn6q0Z3DUONEERX0XOGN+eOIcJk5WyHiBCAL9u4YhJcBqIGdln8zJVWNB2Ba1QR3th+DRCxBcb1tDwBpBLefDVjU/FYQUKz1mUeXuOU1zpvuFnI7wtKvrdeH1Y1p5tUJi8wxChLoGN2eFRpB4l+CxYSXzuUf6u6HtS4E3iq3xaglOsIuNhbEDeOhAlTaNxPofV+lZehvl+Nkjali0tvYdJcrUp7BjkLBSAPvCM02/490aBMOv0bnjeXEkYXbIGaomWQ=
