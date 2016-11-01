@@ -98,9 +98,8 @@ impl Sqrt for f32 {
         let y  = Wrapping(0x5f375a86) - ( y >> 1 );             // what the fuck?
         let y: f32 = unsafe { mem::transmute(y) };
         let x2 = self * 0.5;
-        let y  = y * ( 1.5 - ( x2 * y * y ) );     // 1st iteration
-        //let y  = y * ( 1.5 - ( x2 * y * y ) );   // 2nd iteration, this can be removed
-        y
+        // Assign to y and repeat for a more precise result
+        y * ( 1.5 - ( x2 * y * y ) )
     }
 }
 /// Types that can be square-rooted.
@@ -130,9 +129,8 @@ impl Sqrt for f64 {
         let y  = Wrapping(0x5fe6eb50c7b537a9) - ( y >> 1 );     // what the fuck?
         let y: f64 = unsafe { mem::transmute(y) };
         let x2 = self * 0.5;
-        let y  = y * ( 1.5 - ( x2 * y * y ) );     // 1st iteration
-        //let y  = y * ( 1.5 - ( x2 * y * y ) );   // 2nd iteration, this can be removed
-        y
+        // Assign to y and repeat for a more precise result
+        y * ( 1.5 - ( x2 * y * y ) )
     }
 }
 
@@ -338,8 +336,8 @@ pub trait Clamp<Rhs = Self>: Sized {
     fn max(self, rhs: Rhs) -> Self::Output;
 }
 
-/// Returns the value of `self` constrained to the range [min_val, max_val]
-/// The returned value is computed as min(max(self, min_val), mal_val).
+/// Returns the value of `self` constrained to the range [`min_val`, `max_val`]
+/// The returned value is computed as min(max(self, `min_val`), `mal_val`).
 //fn clamp<V, L, H> (v: V, min_val: L, max_val: H) -> Self::Output {
 //    Self::min(Self::max(self, min_val), max_val)
 //}

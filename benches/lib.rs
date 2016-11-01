@@ -35,7 +35,7 @@ fn bench_rsqrt1x32_a(b: &mut Bencher) {
 
         let n = test::black_box(10_000);
         for _ in 0..n {
-            a = a+a.sqrt().recip();
+            a += a.sqrt().recip();
         }
         a
     });
@@ -49,7 +49,7 @@ fn bench_rsqrt1x32_b(b: &mut Bencher) {
 
         let n = test::black_box(10_000);
         for _ in 0..n {
-            a = a+a.inverse_sqrt();
+            a += a.inverse_sqrt();
         }
         a
     });
@@ -90,7 +90,7 @@ fn bench_rsqrt1x64_a(b: &mut Bencher) {
 
         let n = test::black_box(10_000);
         for _ in 0..n {
-            a = a+a.sqrt().recip();
+            a += a.sqrt().recip();
         }
         a
     });
@@ -104,7 +104,7 @@ fn bench_rsqrt1x64_b(b: &mut Bencher) {
 
         let n = test::black_box(10_000);
         for _ in 0..n {
-            a = a+a.inverse_sqrt();
+            a += a.inverse_sqrt();
         }
         a
     });
@@ -118,7 +118,7 @@ fn bench_rsqrt3x64_a(b: &mut Bencher) {
 
         let n = test::black_box(10_000);
         for _ in 0..n {
-            a = a+a.sqrt().recip();
+            a += a.sqrt().recip();
         }
         a
     });
@@ -131,7 +131,7 @@ fn bench_rsqrt3x64_b(b: &mut Bencher) {
 
         let n = test::black_box(10_000);
         for _ in 0..n {
-            a = a+a.inverse_sqrt();
+            a += a.inverse_sqrt();
         }
         a
     });

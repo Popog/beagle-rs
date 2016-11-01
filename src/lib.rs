@@ -6,6 +6,9 @@
 #![feature(slice_patterns)]
 #![feature(advanced_slice_patterns)]
 
+#![allow(unknown_lints)]
+#![allow(inline_always)]
+
 // TODO: More comments
 
 pub mod angle;

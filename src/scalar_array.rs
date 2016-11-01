@@ -1,4 +1,4 @@
-//! Traits and functions that operate on ScalarArrays.
+//! Traits and functions that operate on `ScalarArrays`.
 
 // TODO: more commments
 
@@ -203,7 +203,7 @@ pub mod vec_array {
         b b b b   h i j k
         c c c c   l m n o
         */
-        let v = D::map(v, |v| <R as Array<S>>::from_value(v));
+        let v = D::map(v, <R as Array<S>>::from_value);
 
         // Now we're going to multiply the items together and then sum the rows down
         // We can do this with a single fold_zip if we're clever, which we are
@@ -343,7 +343,7 @@ pub mod array {
 }
 
 
-/// Construct a ScalarArray from a single value
+/// Construct a `ScalarArray` from a single value
 #[inline(always)]
 pub fn from_scalar<S>(v: S::Scalar) -> S
 where S: ScalarArray,
@@ -357,7 +357,7 @@ S::Scalar: Clone,
     (array::from_scalar::<_, S::Row, S::Dim>(v),).into()
 }
 
-/// Apply a function to all elements of a ScalarArray
+/// Apply a function to all elements of a `ScalarArray`
 #[inline(always)]
 pub fn apply<S, F>(s: S, f: F)
 where S: ScalarArrayVal,
@@ -369,7 +369,7 @@ F: FnMut(S::Scalar),
     array::apply::<_, S::Row, S::Dim, F>(s.get_val(), f)
 }
 
-/// Apply a function to all elements of a ScalarArray
+/// Apply a function to all elements of a `ScalarArray`
 #[inline(always)]
 pub fn apply_ref<'a, S, F>(s: &'a S, f: F)
 where S: ScalarArrayRef,
@@ -383,7 +383,7 @@ S::Dim: TwoDimRef<S::Scalar, S::Row>,
     array::apply::<_, S::Row, S::Dim, F>(s.get_ref(), f)
 }
 
-/// Apply a function to all elements of a ScalarArray
+/// Apply a function to all elements of a `ScalarArray`
 #[inline(always)]
 pub fn apply_mut<'a, S, F>(s: &'a mut S, f: F)
 where S: ScalarArrayMut,
@@ -398,7 +398,7 @@ S::Dim: TwoDimMut<S::Scalar, S::Row>,
 }
 
 
-/// Apply a function to all elements of two ScalarArrays
+/// Apply a function to all elements of two `ScalarArray`s
 #[inline(always)]
 pub fn apply_zip<S, T, F>(s: S, t: T, f: F)
 where S: ScalarArrayVal,
@@ -413,7 +413,7 @@ F: FnMut(S::Scalar, T::Scalar),
     array::apply_zip::<S::Scalar, S::Row, S::Dim, _, F>(s.get_val(), t.get_val(), f)
 }
 
-/// Apply a function to all elements of two ScalarArrays
+/// Apply a function to all elements of two `ScalarArray`s
 #[inline(always)]
 pub fn apply_zip_val_ref<'b, S, T, F>(s: S, t: &'b T, f: F)
 where S: ScalarArrayVal,
@@ -430,7 +430,7 @@ S::Dim: TwoDimRef<T::Scalar, S::Row>,
     array::apply_zip::<S::Scalar, S::Row, S::Dim, _, F>(s.get_val(), t.get_ref(), f)
 }
 
-/// Apply a function to all elements of two ScalarArrays
+/// Apply a function to all elements of two `ScalarArray`s
 #[inline(always)]
 pub fn apply_zip_val_mut<'b, S, T, F>(s: S, t: &'b mut T, f: F)
 where S: ScalarArrayVal,
@@ -447,7 +447,7 @@ S::Dim: TwoDimMut<T::Scalar, S::Row>,
     array::apply_zip::<S::Scalar, S::Row, S::Dim, _, F>(s.get_val(), t.get_mut(), f)
 }
 
-/// Apply a function to all elements of two ScalarArrays
+/// Apply a function to all elements of two `ScalarArray`s
 #[inline(always)]
 pub fn apply_zip_ref_val<'a, S, T, F>(s: &'a S, t: T, f: F)
 where S: ScalarArrayRef,
@@ -464,7 +464,7 @@ S::Dim: TwoDimRef<S::Scalar, S::Row>,
     array::apply_zip::<_, S::Row, S::Dim, _, F>(s.get_ref(), t.get_val(), f)
 }
 
-/// Apply a function to all elements of two ScalarArrays
+/// Apply a function to all elements of two `ScalarArray`s
 #[inline(always)]
 pub fn apply_zip_ref<'a, 'b, S, T, F>(s: &'a S, t: &'b T, f: F)
 where S: ScalarArrayRef,
@@ -481,7 +481,7 @@ S::Dim: TwoDimRef<S::Scalar, S::Row> + TwoDimRef<T::Scalar, S::Row>,
     array::apply_zip::<_, S::Row, S::Dim, _, F>(s.get_ref(), t.get_ref(), f)
 }
 
-/// Apply a function to all elements of two ScalarArrays
+/// Apply a function to all elements of two `ScalarArray`s
 #[inline(always)]
 pub fn apply_zip_ref_mut<'a, 'b, S, T, F>(s: &'a S, t: &'b mut T, f: F)
 where S: ScalarArrayRef,
@@ -498,7 +498,7 @@ S::Dim: TwoDimRef<S::Scalar, S::Row> + TwoDimMut<T::Scalar, S::Row>,
     array::apply_zip::<_, S::Row, S::Dim, _, F>(s.get_ref(), t.get_mut(), f)
 }
 
-/// Apply a function to all elements of two ScalarArrays
+/// Apply a function to all elements of two `ScalarArray`s
 #[inline(always)]
 pub fn apply_zip_mut_val<'a, S, T, F>(s: &'a mut S, t: T, f: F)
 where S: ScalarArrayMut,
@@ -515,7 +515,7 @@ S::Dim: TwoDimMut<S::Scalar, S::Row>,
     array::apply_zip::<_, S::Row, S::Dim, _, F>(s.get_mut(), t.get_val(), f)
 }
 
-/// Apply a function to all elements of two ScalarArrays
+/// Apply a function to all elements of two `ScalarArray`s
 #[inline(always)]
 pub fn apply_zip_mut_ref<'a, 'b, S, T, F>(s: &'a mut S, t: &'b T, f: F)
 where S: ScalarArrayMut,
@@ -532,7 +532,7 @@ S::Dim: TwoDimMut<S::Scalar, S::Row> + TwoDimRef<T::Scalar, S::Row>,
     array::apply_zip::<_, S::Row, S::Dim, _, F>(s.get_mut(), t.get_ref(), f)
 }
 
-/// Apply a function to all elements of two ScalarArrays
+/// Apply a function to all elements of two `ScalarArray`s
 #[inline(always)]
 pub fn apply_zip_mut<'a, 'b, S, T, F>(s: &'a mut S, t: &'b mut T, f: F)
 where S: ScalarArrayMut,
@@ -550,7 +550,7 @@ S::Dim: TwoDimMut<S::Scalar, S::Row> + TwoDimMut<T::Scalar, S::Row>,
 }
 
 
-/// Fold all the scalars in a ScalarArray. The first element is mapped with `f0`,
+/// Fold all the scalars in a `ScalarArray`. The first element is mapped with `f0`,
 /// then folding continues with `f` for other elements.
 #[inline(always)]
 pub fn fold<S, F0, F, O>(s: S, f0: F0, f: F) -> O
@@ -564,7 +564,7 @@ F: FnMut(O, S::Scalar) -> O,
     array::fold::<_, _, S::Dim, F0, F, O>(s.get_val(), f0, f)
 }
 
-/// Fold all the scalars in a ScalarArray by reference. The first element is mapped with `f0`,
+/// Fold all the scalars in a `ScalarArray` by reference. The first element is mapped with `f0`,
 /// then folding continues with `f` for other elements.
 #[inline(always)]
 pub fn fold_ref<'a, S, F0, F, O>(s: &'a S, f0: F0, f: F) -> O
@@ -580,7 +580,7 @@ S::Dim: TwoDimRef<S::Scalar, S::Row>,
     array::fold::<_, _, S::Dim, F0, F, O>(s.get_ref(), f0, f)
 }
 
-/// Fold all the scalars in a ScalarArray by mutable reference. The first element is mapped with
+/// Fold all the scalars in a `ScalarArray` by mutable reference. The first element is mapped with
 /// `f0`, then folding continues with `f` for other elements.
 #[inline(always)]
 pub fn fold_mut<'a, S, F0, F, O>(s: &'a mut S, f0: F0, f: F) -> O
@@ -597,7 +597,7 @@ S::Dim: TwoDimMut<S::Scalar, S::Row>,
 }
 
 
-/// Fold all the scalars in two ScalarArrays. The first elements are mapped with `f0`,
+/// Fold all the scalars in two `ScalarArray`s. The first elements are mapped with `f0`,
 /// then folding continues with `f` for other elements.
 #[inline(always)]
 pub fn fold_zip<S, T, F0, F, O>(s: S, t: T, f0: F0, f: F) -> O
@@ -614,7 +614,7 @@ F: FnMut(O, S::Scalar, T::Scalar) -> O,
     array::fold_zip::<S::Scalar, S::Row, S::Dim, T::Scalar, F0, F, O>(s.get_val(), t.get_val(), f0, f)
 }
 
-/// Fold all the scalars in two ScalarArrays. The first elements are mapped with `f0`,
+/// Fold all the scalars in two `ScalarArray`s. The first elements are mapped with `f0`,
 /// then folding continues with `f` for other elements.
 #[inline(always)]
 pub fn fold_zip_ref<'a, S, T, F0, F, O>(s: &'a S, t: &'a T, f0: F0, f: F) -> O
@@ -632,7 +632,7 @@ F: FnMut(O, &'a S::Scalar, &'a T::Scalar) -> O,
 }
 
 
-/// Construct a ScalarArray from another ScalarArray and a mapping function
+/// Construct a `ScalarArray` from another `ScalarArray` and a mapping function
 #[inline(always)]
 pub fn map<S, T, F>(s: S, f: F) -> T
 where S: ScalarArrayVal,
@@ -647,7 +647,7 @@ F: FnMut(S::Scalar) -> T::Scalar,
     T::from_val(array::map::<S::Scalar, S::Row, S::Dim, _, F>(s.get_val(), f))
 }
 
-/// Construct a ScalarArray from another ScalarArray by reference and a mapping function
+/// Construct a `ScalarArray` from another `ScalarArray` by reference and a mapping function
 #[inline(always)]
 pub fn map_ref<'a, S, T, F>(s: &'a S, f: F) -> T
 where S: ScalarArrayRef,
@@ -664,7 +664,7 @@ S::Dim: TwoDimRef<S::Scalar, S::Row>,
     T::from_val(array::map::<_, S::Row, S::Dim, _, F>(s.get_ref(), f))
 }
 
-/// Construct a ScalarArray from another ScalarArray by reference and a mapping function
+/// Construct a `ScalarArray` from another `ScalarArray` by reference and a mapping function
 #[inline(always)]
 pub fn map_mut<'a, S, T, F>(s: &'a mut S, f: F) -> T
 where S: ScalarArrayMut,
@@ -681,7 +681,7 @@ S::Dim: TwoDimMut<S::Scalar, S::Row>,
     T::from_val(array::map::<_, S::Row, S::Dim, _, F>(s.get_mut(), f))
 }
 
-/// Construct a ScalarArray from two other ScalarArray and a mapping function
+/// Construct a `ScalarArray` from two other `ScalarArray` and a mapping function
 #[inline(always)]
 pub fn map_zip<S, T, U, F>(s: S, t: T, f: F) -> U
 where S: ScalarArrayVal,
@@ -697,7 +697,7 @@ F: FnMut(S::Scalar, T::Scalar) -> U::Scalar,
     U::from_val(array::map_zip::<S::Scalar, S::Row, S::Dim, _, _, F>(s.get_val(), t.get_val(), f))
 }
 
-/// Construct a ScalarArray from two other ScalarArray and a mapping function
+/// Construct a `ScalarArray` from two other `ScalarArray` and a mapping function
 #[inline(always)]
 pub fn map_zip_val_ref<'b, S, T, U, F>(s: S, t: &'b T, f: F) -> U
 where S: ScalarArrayVal,
@@ -715,7 +715,7 @@ S::Dim: TwoDimRef<T::Scalar, S::Row>,
     U::from_val(array::map_zip::<S::Scalar, S::Row, S::Dim, _, _, F>(s.get_val(), t.get_ref(), f))
 }
 
-/// Construct a ScalarArray from two other ScalarArray and a mapping function
+/// Construct a `ScalarArray` from two other `ScalarArray` and a mapping function
 #[inline(always)]
 pub fn map_zip_val_mut<'b, S, T, U, F>(s: S, t: &'b mut T, f: F) -> U
 where S: ScalarArrayVal,
@@ -733,7 +733,7 @@ S::Dim: TwoDimMut<T::Scalar, S::Row>,
     U::from_val(array::map_zip::<S::Scalar, S::Row, S::Dim, _, _, F>(s.get_val(), t.get_mut(), f))
 }
 
-/// Construct a ScalarArray from two other ScalarArray and a mapping function
+/// Construct a `ScalarArray` from two other `ScalarArray` and a mapping function
 #[inline(always)]
 pub fn map_zip_ref_val<'a, S, T, U, F>(s: &'a S, t: T, f: F) -> U
 where S: ScalarArrayRef,
@@ -751,7 +751,7 @@ S::Dim: TwoDimRef<S::Scalar, S::Row>,
     U::from_val(array::map_zip::<_, S::Row, S::Dim, _, _, F>(s.get_ref(), t.get_val(), f))
 }
 
-/// Construct a ScalarArray from two other ScalarArray and a mapping function
+/// Construct a `ScalarArray` from two other `ScalarArray` and a mapping function
 #[inline(always)]
 pub fn map_zip_ref<'a, 'b, S, T, U, F>(s: &'a S, t: &'b T, f: F) -> U
 where S: ScalarArrayRef,
@@ -769,7 +769,7 @@ S::Dim: TwoDimRef<S::Scalar, S::Row> + TwoDimRef<T::Scalar, S::Row>,
     U::from_val(array::map_zip::<_, S::Row, S::Dim, _, _, F>(s.get_ref(), t.get_ref(), f))
 }
 
-/// Construct a ScalarArray from two other ScalarArray and a mapping function
+/// Construct a `ScalarArray` from two other `ScalarArray` and a mapping function
 #[inline(always)]
 pub fn map_zip_ref_mut<'a, 'b, S, T, U, F>(s: &'a S, t: &'b mut T, f: F) -> U
 where S: ScalarArrayRef,
@@ -787,7 +787,7 @@ S::Dim: TwoDimRef<S::Scalar, S::Row> + TwoDimMut<T::Scalar, S::Row>,
     U::from_val(array::map_zip::<_, S::Row, S::Dim, _, _, F>(s.get_ref(), t.get_mut(), f))
 }
 
-/// Construct a ScalarArray from two other ScalarArray and a mapping function
+/// Construct a `ScalarArray` from two other `ScalarArray` and a mapping function
 #[inline(always)]
 pub fn map_zip_mut_val<'a, S, T, U, F>(s: &'a mut S, t: T, f: F) -> U
 where S: ScalarArrayMut,
@@ -805,7 +805,7 @@ S::Dim: TwoDimMut<S::Scalar, S::Row>,
     U::from_val(array::map_zip::<_, S::Row, S::Dim, _, _, F>(s.get_mut(), t.get_val(), f))
 }
 
-/// Construct a ScalarArray from two other ScalarArray and a mapping function
+/// Construct a `ScalarArray` from two other `ScalarArray` and a mapping function
 #[inline(always)]
 pub fn map_zip_mut_ref<'a, 'b, S, T, U, F>(s: &'a mut S, t: &'b T, f: F) -> U
 where S: ScalarArrayMut,
@@ -823,7 +823,7 @@ S::Dim: TwoDimMut<S::Scalar, S::Row> + TwoDimRef<T::Scalar, S::Row>,
     U::from_val(array::map_zip::<_, S::Row, S::Dim, _, _, F>(s.get_mut(), t.get_ref(), f))
 }
 
-/// Construct a ScalarArray from two other ScalarArray and a mapping function
+/// Construct a `ScalarArray` from two other `ScalarArray` and a mapping function
 #[inline(always)]
 pub fn map_zip_mut<'a, S, T, U, F>(s: &'a mut S, t: &'a mut T, f: F) -> U
 where S: ScalarArrayMut,
@@ -841,7 +841,7 @@ S::Dim: TwoDimMut<S::Scalar, S::Row> + TwoDimMut<T::Scalar, S::Row>,
     U::from_val(array::map_zip::<_, S::Row, S::Dim, _, _, F>(s.get_mut(), t.get_mut(), f))
 }
 
-/// Construct a ScalarArray based on the equality of the components of two ScalarArray.
+/// Construct a `ScalarArray` based on the equality of the components of two `ScalarArray`.
 #[inline(always)]
 pub fn cpt_eq<'a, S, T>(s: &'a S, t: &'a T) -> S::Concrete
 where S: ScalarArrayRef + HasConcreteScalarArray<bool>,
@@ -858,7 +858,7 @@ S::Dim: TwoDimRef<S::Scalar, S::Row> + TwoDimRef<T::Scalar, S::Row> + TwoDim<boo
     map_zip_ref(s, t, |s, t| s == t)
 }
 
-/// Construct a ScalarArray based on the inequality of the components of two ScalarArray.
+/// Construct a `ScalarArray` based on the inequality of the components of two `ScalarArray`.
 #[inline(always)]
 pub fn cpt_ne<'a, S, T>(s: &'a S, t: &'a T) -> S::Concrete
 where S: ScalarArrayRef + HasConcreteScalarArray<bool>,
@@ -875,7 +875,7 @@ S::Dim: TwoDimRef<S::Scalar, S::Row> + TwoDimRef<T::Scalar, S::Row> + TwoDim<boo
     map_zip_ref(s, t, |s, t| s != t)
 }
 
-/// Construct a ScalarArray based on the partial ordering of the components of two ScalarArray.
+/// Construct a `ScalarArray` based on the partial ordering of the components of two `ScalarArray`.
 #[inline(always)]
 pub fn cpt_partial_cmp<'a, S, T>(s: &'a S, t: &'a T) -> S::Concrete
 where S: ScalarArrayRef + HasConcreteScalarArray<Option<Ordering>>,
@@ -892,7 +892,7 @@ S::Dim: TwoDimRef<S::Scalar, S::Row> + TwoDimRef<T::Scalar, S::Row> + TwoDim<Opt
     map_zip_ref(s, t, |s, t| s.partial_cmp(t))
 }
 
-/// Construct a ScalarArray based on the `<` comparison of the components of two ScalarArray.
+/// Construct a `ScalarArray` based on the `<` comparison of the components of two `ScalarArray`.
 #[inline(always)]
 pub fn cpt_lt<'a, S, T>(s: &'a S, t: &'a T) -> S::Concrete
 where S: ScalarArrayRef + HasConcreteScalarArray<bool>,
@@ -909,7 +909,7 @@ S::Dim: TwoDimRef<S::Scalar, S::Row> + TwoDimRef<T::Scalar, S::Row> + TwoDim<boo
     map_zip_ref(s, t, |s, t| s < t)
 }
 
-/// Construct a ScalarArray based on the `<=` comparison of the components of two ScalarArray.
+/// Construct a `ScalarArray` based on the `<=` comparison of the components of two `ScalarArray`.
 #[inline(always)]
 pub fn cpt_le<'a, S, T>(s: &'a S, t: &'a T) -> S::Concrete
 where S: ScalarArrayRef + HasConcreteScalarArray<bool>,
@@ -926,7 +926,7 @@ S::Dim: TwoDimRef<S::Scalar, S::Row> + TwoDimRef<T::Scalar, S::Row> + TwoDim<boo
     map_zip_ref(s, t, |s, t| s <= t)
 }
 
-/// Construct a ScalarArray based on the `>` comparison of the components of two ScalarArray.
+/// Construct a `ScalarArray` based on the `>` comparison of the components of two `ScalarArray`.
 #[inline(always)]
 pub fn cpt_gt<'a, S, T>(s: &'a S, t: &'a T) -> S::Concrete
 where S: ScalarArrayRef + HasConcreteScalarArray<bool>,
@@ -943,7 +943,7 @@ S::Dim: TwoDimRef<S::Scalar, S::Row> + TwoDimRef<T::Scalar, S::Row> + TwoDim<boo
     map_zip_ref(s, t, |s, t| s > t)
 }
 
-/// Construct a ScalarArray based on the `>=` comparison of the components of two ScalarArray.
+/// Construct a `ScalarArray` based on the `>=` comparison of the components of two `ScalarArray`.
 #[inline(always)]
 pub fn cpt_ge<'a, S, T>(s: &'a S, t: &'a T) -> S::Concrete
 where S: ScalarArrayRef + HasConcreteScalarArray<bool>,
@@ -960,9 +960,9 @@ S::Dim: TwoDimRef<S::Scalar, S::Row> + TwoDimRef<T::Scalar, S::Row> + TwoDim<boo
     map_zip_ref(s, t, |s, t| s >= t)
 }
 
-/// Construct a ScalarArray based on the ordering of the components of two ScalarArray.
+/// Construct a `ScalarArray` based on the ordering of the components of two `ScalarArray`.
 #[inline(always)]
-pub fn cpt_cmp<'a, 'b, S, T>(s1: &'a S, s2: &'b S) -> S::Concrete
+pub fn cpt_cmp<S, T>(s1: &S, s2: &S) -> S::Concrete
 where S: ScalarArrayRef + HasConcreteScalarArray<Ordering>,
 S::Row: Dim<Ordering>,
 S::Dim: TwoDim<Ordering, S::Row>,
@@ -976,7 +976,7 @@ S::Dim: TwoDimRef<S::Scalar, S::Row> + TwoDimRef<Ordering, S::Row>,
     map_zip_ref(s1, s2, |s1, s2| s1.cmp(s2))
 }
 
-/// Multiply two ScalarArrays component-wise.
+/// Multiply two `ScalarArray`s component-wise.
 #[inline(always)]
 pub fn cpt_mul<S, T>(s: S, t: T) -> S::Concrete
 where S: ScalarArrayVal + HasConcreteScalarArray<<<S as ScalarArray>::Scalar as Mul<T::Scalar>>::Output>,
@@ -993,9 +993,9 @@ S::Dim: TwoDim<<S::Scalar as Mul<T::Scalar>>::Output, S::Row>,
     map_zip(s, t, |s, t| s * t)
 }
 
-/// Multiply two ScalarArrays component-wise.
+/// Multiply two `ScalarArray`s component-wise.
 #[inline(always)]
-pub fn cpt_mul_assign<'a, S, T, U>(s: &'a mut S, t: T)
+pub fn cpt_mul_assign<S, T, U>(s: &mut S, t: T)
 where S: ScalarArrayMut,
 S::Row: Dim<T::Scalar>,
 S::Dim: TwoDim<T::Scalar, S::Row>,
@@ -1010,7 +1010,7 @@ S::Dim: TwoDimMut<S::Scalar, S::Row>,
     apply_zip_mut_val(s, t, |s, t| *s *= t);
 }
 
-/// Sums all the components of a ScalarArray
+/// Sums all the components of a `ScalarArray`
 #[inline(always)]
 pub fn sum<S, O>(s: S) -> O
 where S: ScalarArrayVal,
@@ -1023,7 +1023,7 @@ O: Add<S::Scalar, Output=O>,
     fold(s, Into::into, Add::add)
 }
 
-/// Transposes a ScalarArray
+/// Transposes a `ScalarArray`
 #[inline(always)]
 pub fn transpose<S>(s: S) -> S::Concrete
 where S: ScalarArrayVal + HasConcreteScalarArray<<S as ScalarArray>::Scalar, <S as ScalarArray>::Dim, <S as ScalarArray>::Row>,

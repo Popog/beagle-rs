@@ -321,7 +321,7 @@ S::Scalar: Mul+Clone,
     length2(s).sqrt()
 }
 
-/// Returns an approximated normalized version of `s`. This is generally faster than normalize_exact.
+/// Returns an approximated normalized version of `s`. This is generally faster than `normalize_exact`.
 pub fn normalize<S>(s: S) -> <S as Mul<Value<<<S::Scalar as Mul>::Output as Sqrt>::Output>>>::Output
 where S: VecArrayRef + Mul<Value<<<<S as ScalarArray>::Scalar as Mul>::Output as Sqrt>::Output>>,
 S::Scalar: Mul+Clone,
@@ -618,13 +618,14 @@ mod tests {
         assert_eq!(size_of::<[bool;4]>(), size_of::<Vec4<bool>>());
     }
 
-    /// Test that Vec::new should work with or without the size specified
+    /// Test that Vec::new should work with or without the size or type specified
     #[test]
     fn test_new() {
         assert_eq!(Vec1::new([1f64]),                   Vec::new([1f64]));
         assert_eq!(Vec2::new([1f64, 2f64]),             Vec::new([1f64, 2f64]));
         assert_eq!(Vec3::new([1f64, 2f64, 3f64]),       Vec::new([1f64, 2f64, 3f64]));
         assert_eq!(Vec4::new([1f64, 2f64, 3f64, 4f64]), Vec::new([1f64, 2f64, 3f64, 4f64]));
+        assert_eq!(Vec1::new([1]),                      Vec::new([1]));
     }
 
     /// Test the unary `-` operator

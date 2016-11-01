@@ -200,7 +200,7 @@ R::Smaller: Array<<C as Array<S>>::Type>,
 {
     #[inline(always)]
     fn get_ref(&self) -> <R as Array<<C as Array<&S>>::Type>>::Type {
-        R::map(R::get_ref(&self.0), |s| C::get_ref(s))
+        R::map(R::get_ref(&self.0), C::get_ref)
     }
 }
 
@@ -211,7 +211,7 @@ R::Smaller: Array<<C as Array<S>>::Type>,
 {
     #[inline(always)]
     fn get_mut(&mut self) -> <R as Array<<C as Array<&mut S>>::Type>>::Type {
-        R::map(R::get_mut(&mut self.0), |s| C::get_mut(s))
+        R::map(R::get_mut(&mut self.0), C::get_mut)
     }
 }
 
@@ -255,7 +255,7 @@ R::Smaller: Array<<C as Array<S>>::Type>,
     R::Smaller: Array<Rhs::Scalar>,
     {
         let lhs = <R as Array<<C as Array<Lhs::Scalar>>::Type>>::from_value(lhs.get_vec_val());
-        let rhs = <R as Array<Rhs::Scalar>>::map(rhs.get_vec_val(), |rhs| C::from_value(rhs));
+        let rhs = <R as Array<Rhs::Scalar>>::map(rhs.get_vec_val(), C::from_value);
 
         Mat::from_val(array::map_zip::<Lhs::Scalar, C, R, _, _, _>(lhs, rhs, |lhs, rhs| lhs * rhs))
     }

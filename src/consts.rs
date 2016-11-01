@@ -456,7 +456,7 @@ macro_rules! impl_array {
         		forget(lhs);
                 let init = f(init, lh0);
                 $(let init = f(init, $lh);)*
-        		init
+        		(init)
             },
             // TODO: remove unsafe. Blocked on rust-lang/rust#37302
             fold_zip(lhs, rhs, init, f)=>unsafe {
@@ -469,7 +469,7 @@ macro_rules! impl_array {
         		forget(rhs);
                 let init = f(init, lh0, rh0);
                 $(let init = f(init, $lh, $rh);)*
-        		init
+        		(init)
             },
             // TODO: remove unsafe. Blocked on rust-lang/rust#37302
             map(lhs, f)=>unsafe {
@@ -556,6 +556,7 @@ macro_rules! impl_array {
             fn chain(lh0: T, lhs: <Self::Smaller as Array<T>>::Type) -> Self::Type {
                 // TODO: remove unsafe. Blocked on rust-lang/rust#37302
                 let mut lhs = lhs; { let _unused = &mut lhs; }
+                #[allow(eq_op)]
                 $(let $lh = replace(&mut lhs[$index-1], unsafe { uninitialized() });)*
                 forget(lhs);
                 [lh0$(, $lh)*].into()

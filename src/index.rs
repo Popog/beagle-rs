@@ -1142,5 +1142,4 @@ mod tests {
         v[ZWYX] += Vec4::from_value(1i8);
         assert_eq!(v, Vec4::new([2i8 , 3i8 , 4i8 , 5i8 ]));
     }
-
 }
