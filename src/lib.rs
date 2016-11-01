@@ -9,7 +9,8 @@
 // TODO: More comments
 
 pub mod angle;
-//pub mod index;
+pub mod consts;
+pub mod index;
 pub mod mat;
 pub mod scalar_array;
 pub mod vec;

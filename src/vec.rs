@@ -17,7 +17,6 @@
 //! assert_eq!(v1+v2, Vec3::new([9f32, 14f32, 18f32]));
 //! ```
 
-//use std::mem::transmute;
 use std::ops::{
     Neg,Not,
     BitAnd,BitOr,BitXor,
@@ -27,17 +26,23 @@ use std::ops::{
     ShlAssign,ShrAssign,
     AddAssign,DivAssign,MulAssign,RemAssign,SubAssign,
     Deref,DerefMut,
+    Index,IndexMut,
 };
 
 use super::{Value,v};
+use consts::{
+    One,Two,Three,Four,
+    CustomArrayOne,
+    Array,
+    Dim,HasSmaller,DimRef,DimMut,
+    TwoDim,
+};
 use mat::Mat;
 use num::{ApproxZero,Sign,Sqrt};
 use scalar_array::{
-    Array,Dim,DimHasSmaller,DimRef,DimMut,TwoDim,
     ScalarArray,ScalarArrayVal,ScalarArrayRef,ScalarArrayMut,
     VecArrayVal,VecArrayRef,
     ConcreteScalarArray,HasConcreteScalarArray,ConcreteVecArray,HasConcreteVecArray,
-    One,Two,Three,Four,CustomArrayOne,
 };
 use scalar_array::{
     apply_zip_mut_val,
@@ -46,7 +51,7 @@ use scalar_array::{
     mul_vector_transpose
 };
 use scalar_array::vec_array;
-use utils::RefCast;
+use utils::{ArrayRefCast,RefCast};
 
 /// An array of Scalars, written `Vec<D, V>` but pronounced 'vector'.
 ///
@@ -83,21 +88,62 @@ impl<S, D: Dim<S>> RefCast<D::Type> for Vec<D, S>
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
 where D::Smaller: Array<S>,
 {
+    #[inline(always)]
     fn from_ref(v: &D::Type) -> &Self {
         let ptr = v as *const _ as *const Vec<D, S>;
         unsafe { &*ptr }
     }
+
+    #[inline(always)]
     fn from_mut(v: &mut D::Type) -> &mut Self {
         let ptr = v as *mut _ as *mut Vec<D, S>;
         unsafe { &mut*ptr }
     }
+
+    #[inline(always)]
     fn into_ref(&self) -> &D::Type {
         &self.0
     }
-    fn into_mut(&mut self) -> &D::Type {
+
+    #[inline(always)]
+    fn into_mut(&mut self) -> &mut D::Type {
         &mut self.0
     }
 }
+
+impl<S, D: Dim<S>> ArrayRefCast<D::Type> for Vec<D, S>
+// TODO: remove elaborted bounds. Blocked on rust/issues#20671
+where D::Smaller: Array<S>,
+{
+    #[inline(always)]
+    fn from_array_ref<A>(v: &<A as Array<D::Type>>::Type) -> &<A as Array<Self>>::Type
+    where A: Array<D::Type> + Array<Self> {
+        let ptr = v as *const _ as *const <A as Array<Self>>::Type;
+        unsafe { &*ptr }
+    }
+
+    #[inline(always)]
+    fn from_array_mut<A>(v: &mut <A as Array<D::Type>>::Type) -> &mut <A as Array<Self>>::Type
+    where A: Array<D::Type> + Array<Self> {
+        let ptr = v as *mut _ as *mut <A as Array<Self>>::Type;
+        unsafe { &mut*ptr }
+    }
+
+    #[inline(always)]
+    fn into_array_ref<A>(v: &<A as Array<Self>>::Type) -> &<A as Array<D::Type>>::Type
+    where A: Array<D::Type> + Array<Self> {
+        let ptr = v as *const _ as *const <A as Array<D::Type>>::Type;
+        unsafe { &*ptr }
+    }
+
+    #[inline(always)]
+    fn into_array_mut<A>(v: &mut <A as Array<Self>>::Type) -> &mut <A as Array<D::Type>>::Type
+    where A: Array<D::Type> + Array<Self> {
+        let ptr = v as *mut _ as *mut <A as Array<D::Type>>::Type;
+        unsafe { &mut*ptr }
+    }
+}
+
 
 impl<S, D: Dim<S>> Deref for Vec<D, S>
 where D::Type: Deref<Target=D::RawType>,
@@ -117,6 +163,26 @@ D::Smaller: Array<S>,
 {
     #[inline(always)]
     fn deref_mut(&mut self) -> &mut D::RawType { self.0.deref_mut() }
+}
+
+impl<S, D: Dim<S>> Index<usize> for Vec<D, S>
+where D::Type: AsRef<[S]>,
+// TODO: remove elaborted bounds. Blocked on rust/issues#20671
+D::Smaller: Array<S>,
+{
+    type Output = S;
+
+    #[inline(always)]
+    fn index(&self, rhs: usize) -> &S { self.0.as_ref().index(rhs) }
+}
+
+impl<S, D: Dim<S>> IndexMut<usize> for Vec<D, S>
+where D::Type: AsRef<[S]>+AsMut<[S]>,
+// TODO: remove elaborted bounds. Blocked on rust/issues#20671
+D::Smaller: Array<S>,
+{
+    #[inline(always)]
+    fn index_mut(&mut self, rhs: usize) -> &mut S { self.0.as_mut().index_mut(rhs) }
 }
 
 /// An alias for Vec&lt;One, V&gt;
@@ -228,7 +294,7 @@ T: VecArrayVal<Row=S::Row>,
 S::Scalar: Mul<T::Scalar>,
 <S::Scalar as Mul<T::Scalar>>::Output: Add<Output=<S::Scalar as Mul<T::Scalar>>::Output>,
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
-<S::Row as DimHasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar>,
+<S::Row as HasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar>,
 {
     vec_array::dot::<S::Scalar, S::Row, _>(s.get_vec_val(), t.get_vec_val())
 }
@@ -239,7 +305,7 @@ where S: VecArrayVal,
 S::Scalar: Mul+Clone,
 <S::Scalar as Mul>::Output: Add<Output=<S::Scalar as Mul>::Output>,
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
-<S::Row as DimHasSmaller>::Smaller: Array<S::Scalar>,
+<S::Row as HasSmaller>::Smaller: Array<S::Scalar>,
 {
     fold(s, |s| s.clone()*s, |init, s| init + (s.clone() * s))
 }
@@ -250,7 +316,7 @@ where S: VecArrayVal,
 S::Scalar: Mul+Clone,
 <S::Scalar as Mul>::Output: Add<Output=<S::Scalar as Mul>::Output> + Sqrt,
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
-<S::Row as DimHasSmaller>::Smaller: Array<S::Scalar>,
+<S::Row as HasSmaller>::Smaller: Array<S::Scalar>,
 {
     length2(s).sqrt()
 }
@@ -262,7 +328,7 @@ S::Scalar: Mul+Clone,
 <S::Scalar as Mul>::Output: Add<Output=<S::Scalar as Mul>::Output> + Sqrt,
 S::Row: DimRef<S::Scalar>,
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
-for<'a> <S::Row as DimHasSmaller>::Smaller: Array<S::Scalar> + Array<&'a S::Scalar>,
+for<'a> <S::Row as HasSmaller>::Smaller: Array<S::Scalar> + Array<&'a S::Scalar>,
 {
     let length2 = fold_ref(&s, |s| s.clone()*s.clone(), |init, s| init + (s.clone() * s.clone()));
     s * v(length2.inverse_sqrt())
@@ -275,7 +341,7 @@ S::Scalar: Mul+Clone,
 <S::Scalar as Mul>::Output: Add<Output=<S::Scalar as Mul>::Output> + Sqrt,
 S::Row: DimRef<S::Scalar>,
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
-for<'a> <S::Row as DimHasSmaller>::Smaller: Array<S::Scalar> + Array<&'a S::Scalar>,
+for<'a> <S::Row as HasSmaller>::Smaller: Array<S::Scalar> + Array<&'a S::Scalar>,
 {
     let length2 = fold_ref(&s, |s| s.clone()*s.clone(), |init, s| init + (s.clone() * s.clone()));
     s / v(length2.sqrt())
@@ -290,7 +356,7 @@ S::Scalar: Sub<T::Scalar>,
 <S::Scalar as Sub<T::Scalar>>::Output: Mul + Clone,
 <<S::Scalar as Sub<T::Scalar>>::Output as Mul>::Output: Add<Output=<<S::Scalar as Sub<T::Scalar>>::Output as Mul>::Output>,
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
-<S::Row as DimHasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar>,
+<S::Row as HasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar>,
 {
     fold_zip(s, t,
         |s, t| {
@@ -313,7 +379,7 @@ S::Scalar: Sub<T::Scalar>,
 <S::Scalar as Sub<T::Scalar>>::Output: Mul + Clone,
 <<S::Scalar as Sub<T::Scalar>>::Output as Mul>::Output: Add<Output=<<S::Scalar as Sub<T::Scalar>>::Output as Mul>::Output> + Sqrt,
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
-<S::Row as DimHasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar>,
+<S::Row as HasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar>,
 {
     distance2(s, t).sqrt()
 }
@@ -342,7 +408,7 @@ S::Scalar: Mul + Mul<T::Scalar> + Clone,
 T::Scalar: Mul + Clone,
 <T::Scalar as Mul>::Output: Add<Output=<T::Scalar as Mul>::Output>,
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
-<S::Row as DimHasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar>,
+<S::Row as HasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar>,
 {
     let (s_dot_t, s_length2, t_length2) = fold_zip(s, t,
         |s, t| (s.clone()*t.clone(), s.clone()*s, t.clone()*t),
@@ -371,7 +437,7 @@ I: VecArrayVal<Row=NRef::Row>,
 NRef::Scalar: Mul<I::Scalar>,
 <NRef::Scalar as Mul<I::Scalar>>::Output: Add<Output=<NRef::Scalar as Mul<I::Scalar>>::Output> + Sign<Output=bool>,
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
-<NRef::Row as DimHasSmaller>::Smaller: Array<NRef::Scalar> + Array<I::Scalar>,
+<NRef::Row as HasSmaller>::Smaller: Array<NRef::Scalar> + Array<I::Scalar>,
 {
     if dot(nref, i).is_negative() { n } else { -n }
 }
@@ -385,7 +451,7 @@ I::Scalar: Mul<N::Scalar> + Clone,
 N::Scalar: Clone,
 <I::Scalar as Mul<N::Scalar>>::Output: Add<Output=<I::Scalar as Mul<N::Scalar>>::Output> + Clone,
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
-for<'a> <I::Row as DimHasSmaller>::Smaller: Array<I::Scalar> + Array<&'a I::Scalar> + Array<N::Scalar> + Array<&'a N::Scalar>
+for<'a> <I::Row as HasSmaller>::Smaller: Array<I::Scalar> + Array<&'a I::Scalar> + Array<N::Scalar> + Array<&'a N::Scalar>
 {
     let i_dot_n = fold_zip_ref(&i, &n, |i, n| i.clone()*n.clone(), |init, i, n| init + (i.clone() * n.clone()));
     i - n * v(i_dot_n.clone() + i_dot_n)
@@ -528,8 +594,8 @@ mod tests {
     use std::mem::size_of;
     use super::*;
 
-    #[test]
     /// Test that Vec sizes are what they should be
+    #[test]
     fn test_sizes() {
         assert_eq!(size_of::<[i32;1]>(), size_of::<Vec1<i32>>());
         assert_eq!(size_of::<[i32;2]>(), size_of::<Vec2<i32>>());
@@ -552,8 +618,8 @@ mod tests {
         assert_eq!(size_of::<[bool;4]>(), size_of::<Vec4<bool>>());
     }
 
-    #[test]
     /// Test that Vec::new should work with or without the size specified
+    #[test]
     fn test_new() {
         assert_eq!(Vec1::new([1f64]),                   Vec::new([1f64]));
         assert_eq!(Vec2::new([1f64, 2f64]),             Vec::new([1f64, 2f64]));
@@ -561,8 +627,8 @@ mod tests {
         assert_eq!(Vec4::new([1f64, 2f64, 3f64, 4f64]), Vec::new([1f64, 2f64, 3f64, 4f64]));
     }
 
-    #[test]
     /// Test the unary `-` operator
+    #[test]
     fn test_vec_neg() {
         assert_eq!(-Vec1::new([1f64]),                   Vec1::new([-1f64]));
         assert_eq!(-Vec2::new([1f64, 2f64]),             Vec2::new([-1f64, -2f64]));
@@ -595,8 +661,8 @@ mod tests {
         assert_eq!(-Vec4::new([1i8 , 2i8 , 3i8 , 4i8 ]), Vec4::new([-1i8 , -2i8 , -3i8 , -4i8 ]));
     }
 
-    #[test]
     /// Test the `!` operator
+    #[test]
     fn test_vec_not() {
         assert_eq!(!Vec1::new([false]),                    Vec1::new([true]));
         assert_eq!(!Vec2::new([false, true]),              Vec2::new([true, false]));
@@ -604,11 +670,13 @@ mod tests {
         assert_eq!(!Vec4::new([false, true, false, true]), Vec4::new([true, false, true, false]));
     }
 
+    /// Test the '+' operator
     #[test]
     fn test_vec_add() {
         assert_eq!(Vec1::new([1f64]) + Vec1::new([2f64]), Vec1::new([3f64]));
     }
 
+    /// Test the `[]` operator
     #[test]
     fn test_vec_index() {
         let v = Vec4::new([1f64, 2f64, 3f64, 4f64]);

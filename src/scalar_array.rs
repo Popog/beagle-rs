@@ -2,141 +2,24 @@
 
 // TODO: more commments
 
-use std::borrow::{Borrow,BorrowMut};
 use std::cmp::Ordering;
 use std::ops::{
-    Deref,DerefMut,
     Add,Mul,MulAssign,
 };
-use std::mem::{forget,replace,uninitialized};
 
 use num::{Abs,Clamp,Exp,Hyperbolic,Pow,Recip,Round,Sqrt};
-
-/// Types that represent an array
-pub trait Array<T>: 'static {
-    /// A raw array of the size equal to the dimension this type represents.
-    type RawType: AsRef<[T]>+AsMut<[T]>+BorrowMut<[T]>;
-
-    /// A custom array of the size equal to the dimension this type represents.
-    type Type: AsRef<[T]>+AsMut<[T]>+BorrowMut<[T]>;
-
-    /// Construct an array from a single value `v`, replicating it to all positions in the array.
-    #[inline(always)]
-    fn from_value(v: T) -> Self::Type
-    where T: Clone;
-
-    /// Apply `f` to all the elements of the array
-    #[inline(always)]
-    fn apply<F: FnMut(T)>(lhs: Self::Type, f: F);
-
-    /// Apply `f` to all elements of two arrays.
-    #[inline(always)]
-    fn apply_zip<U, F>(lhs: <Self as Array<T>>::Type, rhs: <Self as Array<U>>::Type, f: F)
-    where Self: Array<U>, F: FnMut(T, U);
-
-    /// Fold all the elements of the array with function `f`
-    #[inline(always)]
-    fn fold<O, F>(lhs: Self::Type, init: O, f: F) -> O
-    where F: FnMut(O, T)-> O;
-
-    /// Fold all the elements of two arrays with function `f`
-    #[inline(always)]
-    fn fold_zip<U, O, F>(lhs: <Self as Array<T>>::Type, rhs: <Self as Array<U>>::Type, init: O, f: F) -> O
-    where Self: Array<U>, F: FnMut(O, T, U)-> O;
-
-    /// Map all the elements of the array with function `f`
-    #[inline(always)]
-    fn map<O, F>(lhs: <Self as Array<T>>::Type, f: F) -> <Self as Array<O>>::Type
-    where Self: Array<O>, F: FnMut(T)-> O;
-
-    /// Map all the elements of two arrays with function `f`
-    #[inline(always)]
-    fn map_zip<U, O, F>(lhs: <Self as Array<T>>::Type, rhs: <Self as Array<U>>::Type, f: F) -> <Self as Array<O>>::Type
-    where Self: Array<U>+Array<O>, F: FnMut(T, U)-> O;
-
-    /// Transpose the elements of a 2d array
-    #[inline(always)]
-    fn transpose<U,S>(lhs: <Self as Array<T>>::Type) -> <U as Array<<Self as Array<S>>::Type>>::Type
-    where Self: Array<S>,
-    T: AsRef<[S]>+AsMut<[S]>+BorrowMut<[S]>,
-    U: Dim<S, Type=T> + Dim<<Self as Array<S>>::Type>,
-    // TODO: remove elaborted bounds. Blocked on rust/issues#20671
-    U::Smaller: Array<S>+Array<<Self as Array<S>>::Type>;
-
-    /// A helper to transpose the elements of a 2d array (recursion)
-    #[inline(always)]
-    fn transpose_helper<U>(lhs: <U as Array<<Self as Array<T>>::Type>>::Type) -> <Self as Array<<U as Array<T>>::Type>>::Type
-    where U: Array<<Self as Array<T>>::Type> + Array<T>,
-    Self: Array<<U as Array<T>>::Type>;
-}
-
-pub trait ArrayRef<T>: Array<T>
-where for<'a> Self: Array<&'a T> {
-    #[inline(always)]
-    fn get_ref(lhs: &<Self as Array<T>>::Type) -> <Self as Array<&T>>::Type;
-}
-
-pub trait ArrayMut<T>: ArrayRef<T>
-where for<'a> Self: Array<&'a mut T> {
-    #[inline(always)]
-    fn get_mut(lhs: &mut <Self as Array<T>>::Type) -> <Self as Array<&mut T>>::Type;
-}
-
-/// Dimension types that can be made smaller
-pub trait DimHasSmaller {
-    /// An array of size 1 smaller than self
-    type Smaller;
-}
-
-/// Types that represent a dimension.
-pub trait Dim<T>: Array<T> + DimHasSmaller
-where Self::Smaller: Array<T> {
-    /// Split the array into an element and a smaller array.
-    #[inline(always)]
-    fn split(lhs: Self::Type) -> (T, <Self::Smaller as Array<T>>::Type);
-
-    /// The opposite of split.
-    #[inline(always)]
-    fn chain(v: T, end: <Self::Smaller as Array<T>>::Type) -> Self::Type;
-}
-
-pub trait DimRef<T>: Dim<T>+ArrayRef<T>
-where for<'a> Self: Dim<&'a T>,
-// TODO: remove elaborted bounds. Blocked on rust/issues#20671
-Self::Smaller: Array<T>,
-{}
-
-pub trait DimMut<T>: DimRef<T>+ArrayMut<T>
-where for<'a> Self: Dim<&'a mut T>,
-// TODO: remove elaborted bounds. Blocked on rust/issues#20671
-Self::Smaller: Array<T>,
-{}
-
-pub trait TwoDim<T, D: Dim<T>>: Dim<D::Type>
-// TODO: remove elaborted bounds. Blocked on rust/issues#20671
-where Self::Smaller: Array<D::Type>,
-D::Smaller: Array<T>,
-{}
-
-pub trait TwoDimRef<T, D: DimRef<T>>: TwoDim<T, D>+DimRef<<D as Array<T>>::Type>
-where for<'a> Self: TwoDim<&'a T, D>,
-// TODO: remove elaborted bounds. Blocked on rust/issues#20671
-Self::Smaller: Array<<D as Array<T>>::Type>,
-D::Smaller: Array<T>,
-{}
-
-pub trait TwoDimMut<T, D: DimMut<T>>: TwoDimRef<T, D>+DimMut<<D as Array<T>>::Type>
-where for<'a> Self: TwoDim<&'a mut T, D>,
-// TODO: remove elaborted bounds. Blocked on rust/issues#20671
-Self::Smaller: Array<<D as Array<T>>::Type>,
-D::Smaller: Array<T>,
-{}
+use consts::{
+    One,
+    Array,
+    Dim,HasSmaller,DimRef,DimMut,
+    TwoDim,TwoDimRef,TwoDimMut,
+};
 
 /// Types that represent a 2d array of scalars (a matrix or a vector).
 pub trait ScalarArray
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
-where <<Self as ScalarArray>::Row as DimHasSmaller>::Smaller: Array<Self::Scalar>,
-<<Self as ScalarArray>::Dim as DimHasSmaller>::Smaller: Array<<Self::Row as Array<Self::Scalar>>::Type>,
+where <<Self as ScalarArray>::Row as HasSmaller>::Smaller: Array<Self::Scalar>,
+<<Self as ScalarArray>::Dim as HasSmaller>::Smaller: Array<<Self::Row as Array<Self::Scalar>>::Type>,
 {
     /// The type of the underlying scalar in the array.
     type Scalar;
@@ -151,10 +34,10 @@ pub trait HasConcreteScalarArray<S, R = <Self as ScalarArray>::Row, D = <Self as
 where R: Dim<S>,
 D: TwoDim<S, R>,
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
-<<Self as ScalarArray>::Row as DimHasSmaller>::Smaller: Array<<Self as ScalarArray>::Scalar>,
-<<Self as ScalarArray>::Dim as DimHasSmaller>::Smaller: Array<<<Self as ScalarArray>::Row as Array<<Self as ScalarArray>::Scalar>>::Type>,
-<R as DimHasSmaller>::Smaller: Array<S>,
-<D as DimHasSmaller>::Smaller: Array<<R as Array<S>>::Type>,
+<<Self as ScalarArray>::Row as HasSmaller>::Smaller: Array<<Self as ScalarArray>::Scalar>,
+<<Self as ScalarArray>::Dim as HasSmaller>::Smaller: Array<<<Self as ScalarArray>::Row as Array<<Self as ScalarArray>::Scalar>>::Type>,
+<R as HasSmaller>::Smaller: Array<S>,
+<D as HasSmaller>::Smaller: Array<<R as Array<S>>::Type>,
 {
     /// The type of a concrete ScalarArray of the specified type
     type Concrete: ConcreteScalarArray<Scalar=S, Row=R, Dim=D>;
@@ -165,16 +48,16 @@ pub trait HasConcreteVecArray<S, R = <Self as ScalarArray>::Row>: ScalarArray<Di
 where R: Dim<S>,
 Self::Concrete: ConcreteVecArray<Scalar=S, Row=R>,
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
-<<Self as ScalarArray>::Row as DimHasSmaller>::Smaller: Array<<Self as ScalarArray>::Scalar>,
-<R as DimHasSmaller>::Smaller: Array<S>,
+<<Self as ScalarArray>::Row as HasSmaller>::Smaller: Array<<Self as ScalarArray>::Scalar>,
+<R as HasSmaller>::Smaller: Array<S>,
 {}
 
 
 /// Matrix/Vector types that can be constructed
 pub trait ConcreteScalarArray: Sized + ScalarArrayVal + HasConcreteScalarArray<<Self as ScalarArray>::Scalar, Concrete=Self>
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
-where <<Self as ScalarArray>::Row as DimHasSmaller>::Smaller: Array<<Self as ScalarArray>::Scalar>,
-<<Self as ScalarArray>::Dim as DimHasSmaller>::Smaller: Array<<<Self as ScalarArray>::Row as Array<<Self as ScalarArray>::Scalar>>::Type>,
+where <<Self as ScalarArray>::Row as HasSmaller>::Smaller: Array<<Self as ScalarArray>::Scalar>,
+<<Self as ScalarArray>::Dim as HasSmaller>::Smaller: Array<<<Self as ScalarArray>::Row as Array<<Self as ScalarArray>::Scalar>>::Type>,
 {
     /// Create from an array
     #[inline(always)]
@@ -184,7 +67,7 @@ where <<Self as ScalarArray>::Row as DimHasSmaller>::Smaller: Array<<Self as Sca
 /// Vector types that can be constructed
 pub trait ConcreteVecArray: Sized + VecArrayVal + ConcreteScalarArray + HasConcreteVecArray<<Self as ScalarArray>::Scalar, Concrete=Self>
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
-where <<Self as ScalarArray>::Row as DimHasSmaller>::Smaller: Array<<Self as ScalarArray>::Scalar>,
+where <<Self as ScalarArray>::Row as HasSmaller>::Smaller: Array<<Self as ScalarArray>::Scalar>,
 {
     /// Create from an array
     #[inline(always)]
@@ -194,8 +77,8 @@ where <<Self as ScalarArray>::Row as DimHasSmaller>::Smaller: Array<<Self as Sca
 /// Matrix/Vector types that can be deconstructed
 pub trait ScalarArrayVal: ScalarArray
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
-where <<Self as ScalarArray>::Row as DimHasSmaller>::Smaller: Array<<Self as ScalarArray>::Scalar>,
-<<Self as ScalarArray>::Dim as DimHasSmaller>::Smaller: Array<<<Self as ScalarArray>::Row as Array<<Self as ScalarArray>::Scalar>>::Type>,
+where <<Self as ScalarArray>::Row as HasSmaller>::Smaller: Array<<Self as ScalarArray>::Scalar>,
+<<Self as ScalarArray>::Dim as HasSmaller>::Smaller: Array<<<Self as ScalarArray>::Row as Array<<Self as ScalarArray>::Scalar>>::Type>,
 {
     /// Extract the inner array
     #[inline(always)]
@@ -205,7 +88,7 @@ where <<Self as ScalarArray>::Row as DimHasSmaller>::Smaller: Array<<Self as Sca
 /// Vector types that can be deconstructed
 pub trait VecArrayVal: ScalarArrayVal<Dim=One>
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
-where <<Self as ScalarArray>::Row as DimHasSmaller>::Smaller: Array<<Self as ScalarArray>::Scalar>,
+where <<Self as ScalarArray>::Row as HasSmaller>::Smaller: Array<<Self as ScalarArray>::Scalar>,
 {
     /// Extract the inner array
     #[inline(always)]
@@ -217,8 +100,8 @@ pub trait ScalarArrayRef: ScalarArray
 where Self::Row: DimRef<Self::Scalar>,
 Self::Dim: TwoDimRef<Self::Scalar, Self::Row>,
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
-<<Self as ScalarArray>::Row as DimHasSmaller>::Smaller: Array<<Self as ScalarArray>::Scalar>,
-<<Self as ScalarArray>::Dim as DimHasSmaller>::Smaller: Array<<<Self as ScalarArray>::Row as Array<<Self as ScalarArray>::Scalar>>::Type>
+<<Self as ScalarArray>::Row as HasSmaller>::Smaller: Array<<Self as ScalarArray>::Scalar>,
+<<Self as ScalarArray>::Dim as HasSmaller>::Smaller: Array<<<Self as ScalarArray>::Row as Array<<Self as ScalarArray>::Scalar>>::Type>
 {
     /// Extract the inner array references
     #[inline(always)]
@@ -229,7 +112,7 @@ Self::Dim: TwoDimRef<Self::Scalar, Self::Row>,
 pub trait VecArrayRef: ScalarArrayRef<Dim=One>
 where Self::Row: DimRef<Self::Scalar>,
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
-for<'a> <<Self as ScalarArray>::Row as DimHasSmaller>::Smaller: Array<<Self as ScalarArray>::Scalar>+Array<&'a <Self as ScalarArray>::Scalar>,
+for<'a> <<Self as ScalarArray>::Row as HasSmaller>::Smaller: Array<<Self as ScalarArray>::Scalar>+Array<&'a <Self as ScalarArray>::Scalar>,
 {
     /// Extract the inner array references
     #[inline(always)]
@@ -241,8 +124,8 @@ pub trait ScalarArrayMut: ScalarArrayRef
 where Self::Row: DimMut<Self::Scalar>,
 Self::Dim: TwoDimMut<Self::Scalar, Self::Row>,
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
-<<Self as ScalarArray>::Row as DimHasSmaller>::Smaller: Array<<Self as ScalarArray>::Scalar>,
-<<Self as ScalarArray>::Dim as DimHasSmaller>::Smaller: Array<<<Self as ScalarArray>::Row as Array<<Self as ScalarArray>::Scalar>>::Type>
+<<Self as ScalarArray>::Row as HasSmaller>::Smaller: Array<<Self as ScalarArray>::Scalar>,
+<<Self as ScalarArray>::Dim as HasSmaller>::Smaller: Array<<<Self as ScalarArray>::Row as Array<<Self as ScalarArray>::Scalar>>::Type>
 {
     /// Extract the inner array mutable references
     #[inline(always)]
@@ -253,7 +136,7 @@ Self::Dim: TwoDimMut<Self::Scalar, Self::Row>,
 
 /// Helpers for 1d arrays
 pub mod vec_array {
-    use super::{Array,Dim,CustomArrayThree};
+    use consts::{Array,Dim,CustomArrayThree};
     use std::ops::{Add, Mul, Sub};
 
     /// Fold all the elements in a 1d array. The first element is mapped with `f0`,
@@ -340,23 +223,15 @@ pub mod vec_array {
     /// Fold all the elements in a 1d array. The first element is mapped with `f0`,
     /// then folding continues with `f` for other elements.
     #[inline(always)]
-    pub fn cross<S, T>(mut s: CustomArrayThree<S>, mut t: CustomArrayThree<T>) -> CustomArrayThree<S::Output>
+    pub fn cross<S, T>(s: CustomArrayThree<S>, t: CustomArrayThree<T>) -> CustomArrayThree<S::Output>
     where S: Clone+Mul<T>,
     T: Clone,
     S::Output: Sub<Output=S::Output>, {
-        use std::mem::{replace,uninitialized,forget};
-        let (s0, s1, s2) = unsafe {(
-            replace(&mut s[0], uninitialized()),
-            replace(&mut s[1], uninitialized()),
-            replace(&mut s[2], uninitialized()),
-        )};
-        let (t0, t1, t2) = unsafe {(
-            replace(&mut t[0], uninitialized()),
-            replace(&mut t[1], uninitialized()),
-            replace(&mut t[2], uninitialized()),
-        )};
-        forget(s);
-        forget(t);
+        use consts::{Three,Two,One};
+        let ((s0, s), (t0, t)) = (Three::split(s), Three::split(t));
+        let ((s1, s), (t1, t)) = (Two::split(s), Two::split(t));
+        let ((s2, _), (t2, _)) = (One::split(s), One::split(t));
+
         let (sb0, sb1, sb2) = (s0.clone(), s1.clone(), s2.clone());
         let (tb0, tb1, tb2) = (t0.clone(), t1.clone(), t2.clone());
         CustomArrayThree([
@@ -370,7 +245,7 @@ pub mod vec_array {
 
 /// Helpers for 2d arrays
 pub mod array {
-    use super::{Array,Dim,TwoDim,};
+    use consts::{Array,Dim,TwoDim,};
     use super::vec_array;
 
     /// Construct a 2d array from a single value
@@ -476,8 +351,8 @@ where S: ScalarArray,
 S::Scalar: Clone,
 <S::Row as Array<S::Scalar>>::Type: Clone,
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
-<S::Row as DimHasSmaller>::Smaller: Array<S::Scalar>,
-<S::Dim as DimHasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type>,
+<S::Row as HasSmaller>::Smaller: Array<S::Scalar>,
+<S::Dim as HasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type>,
 {
     (array::from_scalar::<_, S::Row, S::Dim>(v),).into()
 }
@@ -488,8 +363,8 @@ pub fn apply<S, F>(s: S, f: F)
 where S: ScalarArrayVal,
 F: FnMut(S::Scalar),
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
-<S::Row as DimHasSmaller>::Smaller: Array<S::Scalar>,
-<S::Dim as DimHasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type>,
+<S::Row as HasSmaller>::Smaller: Array<S::Scalar>,
+<S::Dim as HasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type>,
 {
     array::apply::<_, S::Row, S::Dim, F>(s.get_val(), f)
 }
@@ -502,8 +377,8 @@ F: FnMut(&'a S::Scalar),
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
 S::Row: DimRef<S::Scalar>,
 S::Dim: TwoDimRef<S::Scalar, S::Row>,
-<S::Row as DimHasSmaller>::Smaller: Array<S::Scalar>,
-<S::Dim as DimHasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type>,
+<S::Row as HasSmaller>::Smaller: Array<S::Scalar>,
+<S::Dim as HasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type>,
 {
     array::apply::<_, S::Row, S::Dim, F>(s.get_ref(), f)
 }
@@ -516,8 +391,8 @@ F: FnMut(&'a mut S::Scalar),
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
 S::Row: DimMut<S::Scalar>,
 S::Dim: TwoDimMut<S::Scalar, S::Row>,
-<S::Row as DimHasSmaller>::Smaller: Array<S::Scalar>,
-<S::Dim as DimHasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type>,
+<S::Row as HasSmaller>::Smaller: Array<S::Scalar>,
+<S::Dim as HasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type>,
 {
     array::apply::<_, S::Row, S::Dim, F>(s.get_mut(), f)
 }
@@ -532,8 +407,8 @@ S::Dim: TwoDim<T::Scalar, S::Row>,
 T: ScalarArrayVal<Row=S::Row, Dim=S::Dim>,
 F: FnMut(S::Scalar, T::Scalar),
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
-<S::Row as DimHasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar>,
-<S::Dim as DimHasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<T::Row as Array<T::Scalar>>::Type>,
+<S::Row as HasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar>,
+<S::Dim as HasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<T::Row as Array<T::Scalar>>::Type>,
 {
     array::apply_zip::<S::Scalar, S::Row, S::Dim, _, F>(s.get_val(), t.get_val(), f)
 }
@@ -549,8 +424,8 @@ F: FnMut(S::Scalar, &'b T::Scalar),
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
 S::Row: DimRef<T::Scalar>,
 S::Dim: TwoDimRef<T::Scalar, S::Row>,
-<S::Row as DimHasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar>,
-<S::Dim as DimHasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<T::Row as Array<T::Scalar>>::Type>,
+<S::Row as HasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar>,
+<S::Dim as HasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<T::Row as Array<T::Scalar>>::Type>,
 {
     array::apply_zip::<S::Scalar, S::Row, S::Dim, _, F>(s.get_val(), t.get_ref(), f)
 }
@@ -566,8 +441,8 @@ F: FnMut(S::Scalar, &'b mut T::Scalar),
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
 S::Row: DimMut<T::Scalar>,
 S::Dim: TwoDimMut<T::Scalar, S::Row>,
-<S::Row as DimHasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar>,
-<S::Dim as DimHasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<T::Row as Array<T::Scalar>>::Type>,
+<S::Row as HasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar>,
+<S::Dim as HasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<T::Row as Array<T::Scalar>>::Type>,
 {
     array::apply_zip::<S::Scalar, S::Row, S::Dim, _, F>(s.get_val(), t.get_mut(), f)
 }
@@ -583,8 +458,8 @@ F: FnMut(&'a S::Scalar, T::Scalar),
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
 S::Row: DimRef<S::Scalar>,
 S::Dim: TwoDimRef<S::Scalar, S::Row>,
-<S::Row as DimHasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar>,
-<S::Dim as DimHasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<T::Row as Array<T::Scalar>>::Type>,
+<S::Row as HasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar>,
+<S::Dim as HasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<T::Row as Array<T::Scalar>>::Type>,
 {
     array::apply_zip::<_, S::Row, S::Dim, _, F>(s.get_ref(), t.get_val(), f)
 }
@@ -600,8 +475,8 @@ F: FnMut(&'a S::Scalar, &'b T::Scalar),
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
 S::Row: DimRef<S::Scalar> + DimRef<T::Scalar>,
 S::Dim: TwoDimRef<S::Scalar, S::Row> + TwoDimRef<T::Scalar, S::Row>,
-<S::Row as DimHasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar>,
-<S::Dim as DimHasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<T::Row as Array<T::Scalar>>::Type>,
+<S::Row as HasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar>,
+<S::Dim as HasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<T::Row as Array<T::Scalar>>::Type>,
 {
     array::apply_zip::<_, S::Row, S::Dim, _, F>(s.get_ref(), t.get_ref(), f)
 }
@@ -617,8 +492,8 @@ F: FnMut(&'a S::Scalar, &'b mut T::Scalar),
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
 S::Row: DimRef<S::Scalar> + DimMut<T::Scalar>,
 S::Dim: TwoDimRef<S::Scalar, S::Row> + TwoDimMut<T::Scalar, S::Row>,
-<S::Row as DimHasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar>,
-<S::Dim as DimHasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<T::Row as Array<T::Scalar>>::Type>,
+<S::Row as HasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar>,
+<S::Dim as HasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<T::Row as Array<T::Scalar>>::Type>,
 {
     array::apply_zip::<_, S::Row, S::Dim, _, F>(s.get_ref(), t.get_mut(), f)
 }
@@ -634,8 +509,8 @@ F: FnMut(&'a mut S::Scalar, T::Scalar),
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
 S::Row: DimMut<S::Scalar>,
 S::Dim: TwoDimMut<S::Scalar, S::Row>,
-<S::Row as DimHasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar>,
-<S::Dim as DimHasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<T::Row as Array<T::Scalar>>::Type>,
+<S::Row as HasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar>,
+<S::Dim as HasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<T::Row as Array<T::Scalar>>::Type>,
 {
     array::apply_zip::<_, S::Row, S::Dim, _, F>(s.get_mut(), t.get_val(), f)
 }
@@ -651,8 +526,8 @@ F: FnMut(&'a mut S::Scalar, &'b T::Scalar),
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
 S::Row: DimMut<S::Scalar> + DimRef<T::Scalar>,
 S::Dim: TwoDimMut<S::Scalar, S::Row> + TwoDimRef<T::Scalar, S::Row>,
-<S::Row as DimHasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar>,
-<S::Dim as DimHasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<T::Row as Array<T::Scalar>>::Type>,
+<S::Row as HasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar>,
+<S::Dim as HasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<T::Row as Array<T::Scalar>>::Type>,
 {
     array::apply_zip::<_, S::Row, S::Dim, _, F>(s.get_mut(), t.get_ref(), f)
 }
@@ -668,8 +543,8 @@ F: FnMut(&'a mut S::Scalar, &'b mut T::Scalar),
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
 S::Row: DimMut<S::Scalar> + DimMut<T::Scalar>,
 S::Dim: TwoDimMut<S::Scalar, S::Row> + TwoDimMut<T::Scalar, S::Row>,
-<S::Row as DimHasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar>,
-<S::Dim as DimHasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<T::Row as Array<T::Scalar>>::Type>,
+<S::Row as HasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar>,
+<S::Dim as HasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<T::Row as Array<T::Scalar>>::Type>,
 {
     array::apply_zip::<_, S::Row, S::Dim, _, F>(s.get_mut(), t.get_mut(), f)
 }
@@ -683,8 +558,8 @@ where S: ScalarArrayVal,
 F0: FnOnce(S::Scalar) -> O,
 F: FnMut(O, S::Scalar) -> O,
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
-<S::Row as DimHasSmaller>::Smaller: Array<S::Scalar>,
-<S::Dim as DimHasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type>,
+<S::Row as HasSmaller>::Smaller: Array<S::Scalar>,
+<S::Dim as HasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type>,
 {
     array::fold::<_, _, S::Dim, F0, F, O>(s.get_val(), f0, f)
 }
@@ -699,8 +574,8 @@ F: FnMut(O, &'a S::Scalar) -> O,
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
 S::Row: DimRef<S::Scalar>,
 S::Dim: TwoDimRef<S::Scalar, S::Row>,
-<S::Row as DimHasSmaller>::Smaller: Array<S::Scalar> + Array<&'a S::Scalar>,
-<S::Dim as DimHasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<&'a S::Scalar>>::Type>,
+<S::Row as HasSmaller>::Smaller: Array<S::Scalar> + Array<&'a S::Scalar>,
+<S::Dim as HasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<&'a S::Scalar>>::Type>,
 {
     array::fold::<_, _, S::Dim, F0, F, O>(s.get_ref(), f0, f)
 }
@@ -715,8 +590,8 @@ F: FnMut(O, &'a mut S::Scalar) -> O,
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
 S::Row: DimMut<S::Scalar>,
 S::Dim: TwoDimMut<S::Scalar, S::Row>,
-<S::Row as DimHasSmaller>::Smaller: Array<S::Scalar> + Array<&'a mut S::Scalar>,
-<S::Dim as DimHasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<&'a mut S::Scalar>>::Type>,
+<S::Row as HasSmaller>::Smaller: Array<S::Scalar> + Array<&'a mut S::Scalar>,
+<S::Dim as HasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<&'a mut S::Scalar>>::Type>,
 {
     array::fold::<_, _, S::Dim, F0, F, O>(s.get_mut(), f0, f)
 }
@@ -733,8 +608,8 @@ T: ScalarArrayVal<Row=S::Row, Dim=S::Dim>,
 F0: FnOnce(S::Scalar, T::Scalar) -> O,
 F: FnMut(O, S::Scalar, T::Scalar) -> O,
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
-<S::Row as DimHasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar>,
-<S::Dim as DimHasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<T::Scalar>>::Type>,
+<S::Row as HasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar>,
+<S::Dim as HasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<T::Scalar>>::Type>,
 {
     array::fold_zip::<S::Scalar, S::Row, S::Dim, T::Scalar, F0, F, O>(s.get_val(), t.get_val(), f0, f)
 }
@@ -750,8 +625,8 @@ T: ScalarArrayRef<Row=S::Row, Dim=S::Dim>,
 F0: FnOnce(&'a S::Scalar, &'a T::Scalar) -> O,
 F: FnMut(O, &'a S::Scalar, &'a T::Scalar) -> O,
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
-<S::Row as DimHasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar> + Array<&'a S::Scalar> + Array<&'a T::Scalar>,
-<S::Dim as DimHasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<T::Scalar>>::Type> + Array<<S::Row as Array<&'a S::Scalar>>::Type> + Array<<S::Row as Array<&'a T::Scalar>>::Type>,
+<S::Row as HasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar> + Array<&'a S::Scalar> + Array<&'a T::Scalar>,
+<S::Dim as HasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<T::Scalar>>::Type> + Array<<S::Row as Array<&'a S::Scalar>>::Type> + Array<<S::Row as Array<&'a T::Scalar>>::Type>,
 {
     array::fold_zip::<&'a S::Scalar, S::Row, S::Dim, &'a T::Scalar, F0, F, O>(s.get_ref(), t.get_ref(), f0, f)
 }
@@ -766,8 +641,8 @@ S::Dim: TwoDim<T::Scalar, S::Row>,
 T: ConcreteScalarArray<Row=S::Row, Dim=S::Dim>,
 F: FnMut(S::Scalar) -> T::Scalar,
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
-<S::Row as DimHasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar>,
-<S::Dim as DimHasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<T::Scalar>>::Type>,
+<S::Row as HasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar>,
+<S::Dim as HasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<T::Scalar>>::Type>,
 {
     T::from_val(array::map::<S::Scalar, S::Row, S::Dim, _, F>(s.get_val(), f))
 }
@@ -783,8 +658,8 @@ F: FnMut(&'a S::Scalar) -> T::Scalar,
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
 S::Row: DimRef<S::Scalar>,
 S::Dim: TwoDimRef<S::Scalar, S::Row>,
-<S::Row as DimHasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar>,
-<S::Dim as DimHasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<T::Scalar>>::Type>,
+<S::Row as HasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar>,
+<S::Dim as HasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<T::Scalar>>::Type>,
 {
     T::from_val(array::map::<_, S::Row, S::Dim, _, F>(s.get_ref(), f))
 }
@@ -800,8 +675,8 @@ F: FnMut(&'a mut S::Scalar) -> T::Scalar,
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
 S::Row: DimMut<S::Scalar>,
 S::Dim: TwoDimMut<S::Scalar, S::Row>,
-<S::Row as DimHasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar>,
-<S::Dim as DimHasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<T::Scalar>>::Type>,
+<S::Row as HasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar>,
+<S::Dim as HasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<T::Scalar>>::Type>,
 {
     T::from_val(array::map::<_, S::Row, S::Dim, _, F>(s.get_mut(), f))
 }
@@ -816,8 +691,8 @@ T: ScalarArrayVal<Row=S::Row, Dim=S::Dim>,
 U: ConcreteScalarArray<Row=S::Row, Dim=S::Dim>,
 F: FnMut(S::Scalar, T::Scalar) -> U::Scalar,
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
-<S::Row as DimHasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar> + Array<U::Scalar>,
-<S::Dim as DimHasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<T::Scalar>>::Type> + Array<<S::Row as Array<U::Scalar>>::Type>,
+<S::Row as HasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar> + Array<U::Scalar>,
+<S::Dim as HasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<T::Scalar>>::Type> + Array<<S::Row as Array<U::Scalar>>::Type>,
 {
     U::from_val(array::map_zip::<S::Scalar, S::Row, S::Dim, _, _, F>(s.get_val(), t.get_val(), f))
 }
@@ -834,8 +709,8 @@ F: FnMut(S::Scalar, &'b T::Scalar) -> U::Scalar,
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
 S::Row: DimRef<T::Scalar>,
 S::Dim: TwoDimRef<T::Scalar, S::Row>,
-<S::Row as DimHasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar> + Array<U::Scalar>,
-<S::Dim as DimHasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<T::Scalar>>::Type> + Array<<S::Row as Array<U::Scalar>>::Type>,
+<S::Row as HasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar> + Array<U::Scalar>,
+<S::Dim as HasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<T::Scalar>>::Type> + Array<<S::Row as Array<U::Scalar>>::Type>,
 {
     U::from_val(array::map_zip::<S::Scalar, S::Row, S::Dim, _, _, F>(s.get_val(), t.get_ref(), f))
 }
@@ -852,8 +727,8 @@ F: FnMut(S::Scalar, &'b mut T::Scalar) -> U::Scalar,
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
 S::Row: DimMut<T::Scalar>,
 S::Dim: TwoDimMut<T::Scalar, S::Row>,
-<S::Row as DimHasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar> + Array<U::Scalar>,
-<S::Dim as DimHasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<T::Scalar>>::Type> + Array<<S::Row as Array<U::Scalar>>::Type>,
+<S::Row as HasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar> + Array<U::Scalar>,
+<S::Dim as HasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<T::Scalar>>::Type> + Array<<S::Row as Array<U::Scalar>>::Type>,
 {
     U::from_val(array::map_zip::<S::Scalar, S::Row, S::Dim, _, _, F>(s.get_val(), t.get_mut(), f))
 }
@@ -870,8 +745,8 @@ F: FnMut(&'a S::Scalar, T::Scalar) -> U::Scalar,
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
 S::Row: DimRef<S::Scalar>,
 S::Dim: TwoDimRef<S::Scalar, S::Row>,
-<S::Row as DimHasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar> + Array<U::Scalar>,
-<S::Dim as DimHasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<T::Scalar>>::Type> + Array<<S::Row as Array<U::Scalar>>::Type>,
+<S::Row as HasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar> + Array<U::Scalar>,
+<S::Dim as HasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<T::Scalar>>::Type> + Array<<S::Row as Array<U::Scalar>>::Type>,
 {
     U::from_val(array::map_zip::<_, S::Row, S::Dim, _, _, F>(s.get_ref(), t.get_val(), f))
 }
@@ -888,8 +763,8 @@ F: FnMut(&'a S::Scalar, &'b T::Scalar) -> U::Scalar,
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
 S::Row: DimRef<S::Scalar> + DimRef<T::Scalar>,
 S::Dim: TwoDimRef<S::Scalar, S::Row> + TwoDimRef<T::Scalar, S::Row>,
-<S::Row as DimHasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar> + Array<U::Scalar>,
-<S::Dim as DimHasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<T::Scalar>>::Type> + Array<<S::Row as Array<U::Scalar>>::Type>,
+<S::Row as HasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar> + Array<U::Scalar>,
+<S::Dim as HasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<T::Scalar>>::Type> + Array<<S::Row as Array<U::Scalar>>::Type>,
 {
     U::from_val(array::map_zip::<_, S::Row, S::Dim, _, _, F>(s.get_ref(), t.get_ref(), f))
 }
@@ -906,8 +781,8 @@ F: FnMut(&'a S::Scalar, &'b mut T::Scalar) -> U::Scalar,
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
 S::Row: DimRef<S::Scalar> + DimMut<T::Scalar>,
 S::Dim: TwoDimRef<S::Scalar, S::Row> + TwoDimMut<T::Scalar, S::Row>,
-<S::Row as DimHasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar> + Array<U::Scalar>,
-<S::Dim as DimHasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<T::Scalar>>::Type> + Array<<S::Row as Array<U::Scalar>>::Type>,
+<S::Row as HasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar> + Array<U::Scalar>,
+<S::Dim as HasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<T::Scalar>>::Type> + Array<<S::Row as Array<U::Scalar>>::Type>,
 {
     U::from_val(array::map_zip::<_, S::Row, S::Dim, _, _, F>(s.get_ref(), t.get_mut(), f))
 }
@@ -924,8 +799,8 @@ F: FnMut(&'a mut S::Scalar, T::Scalar) -> U::Scalar,
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
 S::Row: DimMut<S::Scalar>,
 S::Dim: TwoDimMut<S::Scalar, S::Row>,
-<S::Row as DimHasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar> + Array<U::Scalar>,
-<S::Dim as DimHasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<T::Scalar>>::Type> + Array<<S::Row as Array<U::Scalar>>::Type>,
+<S::Row as HasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar> + Array<U::Scalar>,
+<S::Dim as HasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<T::Scalar>>::Type> + Array<<S::Row as Array<U::Scalar>>::Type>,
 {
     U::from_val(array::map_zip::<_, S::Row, S::Dim, _, _, F>(s.get_mut(), t.get_val(), f))
 }
@@ -942,8 +817,8 @@ F: FnMut(&'a mut S::Scalar, &'b T::Scalar) -> U::Scalar,
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
 S::Row: DimMut<S::Scalar> + DimRef<T::Scalar>,
 S::Dim: TwoDimMut<S::Scalar, S::Row> + TwoDimRef<T::Scalar, S::Row>,
-<S::Row as DimHasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar> + Array<U::Scalar>,
-<S::Dim as DimHasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<T::Scalar>>::Type> + Array<<S::Row as Array<U::Scalar>>::Type>,
+<S::Row as HasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar> + Array<U::Scalar>,
+<S::Dim as HasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<T::Scalar>>::Type> + Array<<S::Row as Array<U::Scalar>>::Type>,
 {
     U::from_val(array::map_zip::<_, S::Row, S::Dim, _, _, F>(s.get_mut(), t.get_ref(), f))
 }
@@ -960,8 +835,8 @@ F: FnMut(&'a mut S::Scalar, &'a mut T::Scalar) -> U::Scalar,
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
 S::Row: DimMut<S::Scalar> + DimMut<T::Scalar>,
 S::Dim: TwoDimMut<S::Scalar, S::Row> + TwoDimMut<T::Scalar, S::Row>,
-<S::Row as DimHasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar> + Array<U::Scalar>,
-<S::Dim as DimHasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<T::Scalar>>::Type> + Array<<S::Row as Array<U::Scalar>>::Type>,
+<S::Row as HasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar> + Array<U::Scalar>,
+<S::Dim as HasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<T::Scalar>>::Type> + Array<<S::Row as Array<U::Scalar>>::Type>,
 {
     U::from_val(array::map_zip::<_, S::Row, S::Dim, _, _, F>(s.get_mut(), t.get_mut(), f))
 }
@@ -977,8 +852,8 @@ S::Scalar: PartialEq<T::Scalar>,
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
 S::Row: DimRef<S::Scalar> + DimRef<T::Scalar> + Dim<bool>,
 S::Dim: TwoDimRef<S::Scalar, S::Row> + TwoDimRef<T::Scalar, S::Row> + TwoDim<bool, S::Row>,
-<S::Row as DimHasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar> + Array<bool>,
-<S::Dim as DimHasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<T::Scalar>>::Type> + Array<<S::Row as Array<bool>>::Type>,
+<S::Row as HasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar> + Array<bool>,
+<S::Dim as HasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<T::Scalar>>::Type> + Array<<S::Row as Array<bool>>::Type>,
 {
     map_zip_ref(s, t, |s, t| s == t)
 }
@@ -994,8 +869,8 @@ S::Scalar: PartialEq<T::Scalar>,
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
 S::Row: DimRef<S::Scalar> + DimRef<T::Scalar> + Dim<bool>,
 S::Dim: TwoDimRef<S::Scalar, S::Row> + TwoDimRef<T::Scalar, S::Row> + TwoDim<bool, S::Row>,
-<S::Row as DimHasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar> + Array<bool>,
-<S::Dim as DimHasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<T::Scalar>>::Type> + Array<<S::Row as Array<bool>>::Type>,
+<S::Row as HasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar> + Array<bool>,
+<S::Dim as HasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<T::Scalar>>::Type> + Array<<S::Row as Array<bool>>::Type>,
 {
     map_zip_ref(s, t, |s, t| s != t)
 }
@@ -1011,8 +886,8 @@ S::Scalar: PartialOrd<T::Scalar>,
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
 S::Row: DimRef<S::Scalar> + DimRef<T::Scalar> + Dim<Option<Ordering>>,
 S::Dim: TwoDimRef<S::Scalar, S::Row> + TwoDimRef<T::Scalar, S::Row> + TwoDim<Option<Ordering>, S::Row>,
-<S::Row as DimHasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar> + Array<Option<Ordering>>,
-<S::Dim as DimHasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<T::Scalar>>::Type> + Array<<S::Row as Array<Option<Ordering>>>::Type>,
+<S::Row as HasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar> + Array<Option<Ordering>>,
+<S::Dim as HasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<T::Scalar>>::Type> + Array<<S::Row as Array<Option<Ordering>>>::Type>,
 {
     map_zip_ref(s, t, |s, t| s.partial_cmp(t))
 }
@@ -1028,8 +903,8 @@ S::Scalar: PartialOrd<T::Scalar>,
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
 S::Row: DimRef<S::Scalar> + DimRef<T::Scalar> + Dim<bool>,
 S::Dim: TwoDimRef<S::Scalar, S::Row> + TwoDimRef<T::Scalar, S::Row> + TwoDim<bool, S::Row>,
-<S::Row as DimHasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar> + Array<bool>,
-<S::Dim as DimHasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<T::Scalar>>::Type> + Array<<S::Row as Array<bool>>::Type>,
+<S::Row as HasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar> + Array<bool>,
+<S::Dim as HasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<T::Scalar>>::Type> + Array<<S::Row as Array<bool>>::Type>,
 {
     map_zip_ref(s, t, |s, t| s < t)
 }
@@ -1045,8 +920,8 @@ S::Scalar: PartialOrd<T::Scalar>,
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
 S::Row: DimRef<S::Scalar> + DimRef<T::Scalar> + Dim<bool>,
 S::Dim: TwoDimRef<S::Scalar, S::Row> + TwoDimRef<T::Scalar, S::Row> + TwoDim<bool, S::Row>,
-<S::Row as DimHasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar> + Array<bool>,
-<S::Dim as DimHasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<T::Scalar>>::Type> + Array<<S::Row as Array<bool>>::Type>,
+<S::Row as HasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar> + Array<bool>,
+<S::Dim as HasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<T::Scalar>>::Type> + Array<<S::Row as Array<bool>>::Type>,
 {
     map_zip_ref(s, t, |s, t| s <= t)
 }
@@ -1062,8 +937,8 @@ S::Scalar: PartialOrd<T::Scalar>,
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
 S::Row: DimRef<S::Scalar> + DimRef<T::Scalar> + Dim<bool>,
 S::Dim: TwoDimRef<S::Scalar, S::Row> + TwoDimRef<T::Scalar, S::Row> + TwoDim<bool, S::Row>,
-<S::Row as DimHasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar> + Array<bool>,
-<S::Dim as DimHasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<T::Scalar>>::Type> + Array<<S::Row as Array<bool>>::Type>,
+<S::Row as HasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar> + Array<bool>,
+<S::Dim as HasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<T::Scalar>>::Type> + Array<<S::Row as Array<bool>>::Type>,
 {
     map_zip_ref(s, t, |s, t| s > t)
 }
@@ -1079,8 +954,8 @@ S::Scalar: PartialOrd<T::Scalar>,
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
 S::Row: DimRef<S::Scalar> + DimRef<T::Scalar> + Dim<bool>,
 S::Dim: TwoDimRef<S::Scalar, S::Row> + TwoDimRef<T::Scalar, S::Row> + TwoDim<bool, S::Row>,
-<S::Row as DimHasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar> + Array<bool>,
-<S::Dim as DimHasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<T::Scalar>>::Type> + Array<<S::Row as Array<bool>>::Type>,
+<S::Row as HasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar> + Array<bool>,
+<S::Dim as HasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<T::Scalar>>::Type> + Array<<S::Row as Array<bool>>::Type>,
 {
     map_zip_ref(s, t, |s, t| s >= t)
 }
@@ -1095,8 +970,8 @@ S::Scalar: Ord,
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
 S::Row: DimRef<S::Scalar> + DimRef<Ordering>,
 S::Dim: TwoDimRef<S::Scalar, S::Row> + TwoDimRef<Ordering, S::Row>,
-<S::Row as DimHasSmaller>::Smaller: Array<S::Scalar> + Array<Ordering>,
-<S::Dim as DimHasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<Ordering>>::Type>,
+<S::Row as HasSmaller>::Smaller: Array<S::Scalar> + Array<Ordering>,
+<S::Dim as HasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<Ordering>>::Type>,
 {
     map_zip_ref(s1, s2, |s1, s2| s1.cmp(s2))
 }
@@ -1112,8 +987,8 @@ S::Scalar: Mul<T::Scalar>,
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
 S::Row: Dim<<S::Scalar as Mul<T::Scalar>>::Output>,
 S::Dim: TwoDim<<S::Scalar as Mul<T::Scalar>>::Output, S::Row>,
-<S::Row as DimHasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar> + Array<<<S as ScalarArray>::Scalar as Mul<T::Scalar>>::Output>,
-<S::Dim as DimHasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<T::Scalar>>::Type> + Array<<S::Row as Array<<<S as ScalarArray>::Scalar as Mul<T::Scalar>>::Output>>::Type>,
+<S::Row as HasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar> + Array<<<S as ScalarArray>::Scalar as Mul<T::Scalar>>::Output>,
+<S::Dim as HasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<T::Scalar>>::Type> + Array<<S::Row as Array<<<S as ScalarArray>::Scalar as Mul<T::Scalar>>::Output>>::Type>,
 {
     map_zip(s, t, |s, t| s * t)
 }
@@ -1129,8 +1004,8 @@ S::Scalar: MulAssign<T::Scalar>,
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
 S::Row: DimMut<S::Scalar>,
 S::Dim: TwoDimMut<S::Scalar, S::Row>,
-<S::Row as DimHasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar>,
-<S::Dim as DimHasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<T::Scalar>>::Type>,
+<S::Row as HasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar>,
+<S::Dim as HasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<T::Scalar>>::Type>,
 {
     apply_zip_mut_val(s, t, |s, t| *s *= t);
 }
@@ -1142,8 +1017,8 @@ where S: ScalarArrayVal,
 S::Scalar: Into<O>,
 O: Add<S::Scalar, Output=O>,
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
-<S::Row as DimHasSmaller>::Smaller: Array<S::Scalar>,
-<S::Dim as DimHasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type>,
+<S::Row as HasSmaller>::Smaller: Array<S::Scalar>,
+<S::Dim as HasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type>,
 {
     fold(s, Into::into, Add::add)
 }
@@ -1156,8 +1031,8 @@ S::Row: TwoDim<S::Scalar, S::Dim>,
 S::Dim: Dim<S::Scalar>,
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
 <S as HasConcreteScalarArray<S::Scalar, S::Dim, S::Row>>::Concrete: HasConcreteScalarArray<S::Scalar, S::Dim, S::Row, Concrete=<S as HasConcreteScalarArray<S::Scalar, S::Dim, S::Row>>::Concrete>,
-<S::Row as DimHasSmaller>::Smaller: Array<S::Scalar> + Array<<S::Dim as Array<S::Scalar>>::Type>,
-<S::Dim as DimHasSmaller>::Smaller: Array<S::Scalar> + Array<<S::Row as Array<S::Scalar>>::Type>,
+<S::Row as HasSmaller>::Smaller: Array<S::Scalar> + Array<<S::Dim as Array<S::Scalar>>::Type>,
+<S::Dim as HasSmaller>::Smaller: Array<S::Scalar> + Array<<S::Row as Array<S::Scalar>>::Type>,
 {
     S::Concrete::from_val(array::transpose::<_, _, S::Dim>(s.get_val()))
 }
@@ -1174,8 +1049,8 @@ M::Scalar: Mul<V::Scalar>,
 <M::Scalar as Mul<V::Scalar>>::Output: Add<Output=<M::Scalar as Mul<V::Scalar>>::Output>,
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
 <V as HasConcreteScalarArray<<M::Scalar as Mul<V::Scalar>>::Output, M::Dim>>::Concrete: ConcreteVecArray,
-<M::Row as DimHasSmaller>::Smaller: Array<M::Scalar> + Array<V::Scalar>,
-<M::Dim as DimHasSmaller>::Smaller: Array<<M::Row as Array<M::Scalar>>::Type> + Array<<V::Row as Array<V::Scalar>>::Type> + Array<<M::Scalar as Mul<V::Scalar>>::Output>,
+<M::Row as HasSmaller>::Smaller: Array<M::Scalar> + Array<V::Scalar>,
+<M::Dim as HasSmaller>::Smaller: Array<<M::Row as Array<M::Scalar>>::Type> + Array<<V::Row as Array<V::Scalar>>::Type> + Array<<M::Scalar as Mul<V::Scalar>>::Output>,
 {
     /* We're trying to accomplish the following multiplication
     a b c   m     a*m + b*n + c*o
@@ -1211,8 +1086,8 @@ V::Scalar: Mul<M::Scalar> + Clone,
 <V::Scalar as Mul<M::Scalar>>::Output: Add<Output=<V::Scalar as Mul<M::Scalar>>::Output>,
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
 <V as HasConcreteScalarArray<<V::Scalar as Mul<M::Scalar>>::Output, M::Row>>::Concrete: ConcreteVecArray,
-<M::Row as DimHasSmaller>::Smaller: Array<M::Scalar> + Array<V::Scalar> + Array<<V::Scalar as Mul<M::Scalar>>::Output>,
-<M::Dim as DimHasSmaller>::Smaller: Array<V::Scalar> + Array<<M::Row as Array<M::Scalar>>::Type> + Array<<M::Row as Array<V::Scalar>>::Type>,
+<M::Row as HasSmaller>::Smaller: Array<M::Scalar> + Array<V::Scalar> + Array<<V::Scalar as Mul<M::Scalar>>::Output>,
+<M::Dim as HasSmaller>::Smaller: Array<V::Scalar> + Array<<M::Row as Array<M::Scalar>>::Type> + Array<<M::Row as Array<V::Scalar>>::Type>,
 {
     let v = v.get_vec_val();
     let m = m.get_val();
@@ -1234,9 +1109,9 @@ M::Scalar: Mul<N::Scalar> + Clone,
 <M::Scalar as Mul<N::Scalar>>::Output: Add<Output=<M::Scalar as Mul<N::Scalar>>::Output>,
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
 <M as HasConcreteScalarArray<<<M as ScalarArray>::Scalar as Mul<N::Scalar>>::Output, N::Row, <M as ScalarArray>::Dim>>::Concrete: ConcreteScalarArray,
-<M::Row as DimHasSmaller>::Smaller: Array<M::Scalar> + Array<<N::Row as Array<N::Scalar>>::Type> + Array<<N::Row as Array<M::Scalar>>::Type> ,
-<M::Dim as DimHasSmaller>::Smaller: Array<<M::Row as Array<M::Scalar>>::Type> + Array<<N::Row as Array<<M::Scalar as Mul<N::Scalar>>::Output>>::Type>,
-<N::Row as DimHasSmaller>::Smaller: Array<N::Scalar> + Array<<M::Scalar as Mul<N::Scalar>>::Output>,
+<M::Row as HasSmaller>::Smaller: Array<M::Scalar> + Array<<N::Row as Array<N::Scalar>>::Type> + Array<<N::Row as Array<M::Scalar>>::Type> ,
+<M::Dim as HasSmaller>::Smaller: Array<<M::Row as Array<M::Scalar>>::Type> + Array<<N::Row as Array<<M::Scalar as Mul<N::Scalar>>::Output>>::Type>,
+<N::Row as HasSmaller>::Smaller: Array<N::Scalar> + Array<<M::Scalar as Mul<N::Scalar>>::Output>,
 {
     /* We're trying to accomplish the following multiplication
     a b c   m n     a*m + b*o + q*p     a*n + b*p + c*r
@@ -1267,8 +1142,8 @@ S: HasConcreteScalarArray<<<S as ScalarArray>::Scalar as Sqrt>::Output>,
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
 S::Row: Dim<<S::Scalar as Sqrt>::Output>,
 S::Dim: TwoDim<<S::Scalar as Sqrt>::Output, S::Row>,
-<S::Row as DimHasSmaller>::Smaller: Array<S::Scalar> + Array<<S::Scalar as Sqrt>::Output>,
-<S::Dim as DimHasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<<S::Scalar as Sqrt>::Output>>::Type>,
+<S::Row as HasSmaller>::Smaller: Array<S::Scalar> + Array<<S::Scalar as Sqrt>::Output>,
+<S::Dim as HasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<<S::Scalar as Sqrt>::Output>>::Type>,
 {
     /// The resulting type.
     type Output = S::Concrete;
@@ -1291,8 +1166,8 @@ S: HasConcreteScalarArray<<<S as ScalarArray>::Scalar as Recip>::Output>,
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
 S::Row: Dim<<S::Scalar as Recip>::Output>,
 S::Dim: TwoDim<<S::Scalar as Recip>::Output, S::Row>,
-<S::Row as DimHasSmaller>::Smaller: Array<S::Scalar> + Array<<S::Scalar as Recip>::Output>,
-<S::Dim as DimHasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<<S::Scalar as Recip>::Output>>::Type>,
+<S::Row as HasSmaller>::Smaller: Array<S::Scalar> + Array<<S::Scalar as Recip>::Output>,
+<S::Dim as HasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<<S::Scalar as Recip>::Output>>::Type>,
 {
     /// The output type
     type Output = S::Concrete;
@@ -1307,8 +1182,8 @@ S: HasConcreteScalarArray<<<S as ScalarArray>::Scalar as Hyperbolic>::Output>,
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
 S::Row: Dim<<S::Scalar as Hyperbolic>::Output>,
 S::Dim: TwoDim<<S::Scalar as Hyperbolic>::Output, S::Row>,
-<S::Row as DimHasSmaller>::Smaller: Array<S::Scalar> + Array<<S::Scalar as Hyperbolic>::Output>,
-<S::Dim as DimHasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<<S::Scalar as Hyperbolic>::Output>>::Type>,
+<S::Row as HasSmaller>::Smaller: Array<S::Scalar> + Array<<S::Scalar as Hyperbolic>::Output>,
+<S::Dim as HasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<<S::Scalar as Hyperbolic>::Output>>::Type>,
 {
     /// The output type
     type Output = S::Concrete;
@@ -1332,8 +1207,8 @@ S: HasConcreteScalarArray<<<S as ScalarArray>::Scalar as Abs>::Output>,
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
 S::Row: Dim<<S::Scalar as Abs>::Output>,
 S::Dim: TwoDim<<S::Scalar as Abs>::Output, S::Row>,
-<S::Row as DimHasSmaller>::Smaller: Array<S::Scalar> + Array<<S::Scalar as Abs>::Output>,
-<S::Dim as DimHasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<<S::Scalar as Abs>::Output>>::Type>,
+<S::Row as HasSmaller>::Smaller: Array<S::Scalar> + Array<<S::Scalar as Abs>::Output>,
+<S::Dim as HasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<<S::Scalar as Abs>::Output>>::Type>,
 {
     /// The resulting type.
     type Output = S::Concrete;
@@ -1356,8 +1231,8 @@ Lhs: HasConcreteScalarArray<<<Lhs as ScalarArray>::Scalar as Pow<<Rhs as ScalarA
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
 Lhs::Row: Dim<<<Lhs as ScalarArray>::Scalar as Pow<<Rhs as ScalarArray>::Scalar>>::Output>,
 Lhs::Dim: TwoDim<<<Lhs as ScalarArray>::Scalar as Pow<<Rhs as ScalarArray>::Scalar>>::Output, Lhs::Row>,
-<Lhs::Row as DimHasSmaller>::Smaller: Array<Lhs::Scalar> + Array<Rhs::Scalar> + Array<<Lhs::Scalar as Pow<Rhs::Scalar>>::Output>,
-<Lhs::Dim as DimHasSmaller>::Smaller: Array<<Lhs::Row as Array<Lhs::Scalar>>::Type> + Array<<Rhs::Row as Array<Rhs::Scalar>>::Type> + Array<<Lhs::Row as Array<<Lhs::Scalar as Pow<Rhs::Scalar>>::Output>>::Type>,
+<Lhs::Row as HasSmaller>::Smaller: Array<Lhs::Scalar> + Array<Rhs::Scalar> + Array<<Lhs::Scalar as Pow<Rhs::Scalar>>::Output>,
+<Lhs::Dim as HasSmaller>::Smaller: Array<<Lhs::Row as Array<Lhs::Scalar>>::Type> + Array<<Rhs::Row as Array<Rhs::Scalar>>::Type> + Array<<Lhs::Row as Array<<Lhs::Scalar as Pow<Rhs::Scalar>>::Output>>::Type>,
 {
     /// The output type
     type Output = Lhs::Concrete;
@@ -1374,8 +1249,8 @@ S: HasConcreteScalarArray<<<S as ScalarArray>::Scalar as Exp>::Output>,
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
 S::Row: Dim<<<S as ScalarArray>::Scalar as Exp>::Output>,
 S::Dim: TwoDim<<<S as ScalarArray>::Scalar as Exp>::Output, S::Row>,
-<S::Row as DimHasSmaller>::Smaller: Array<S::Scalar> + Array<<S::Scalar as Exp>::Output>,
-<S::Dim as DimHasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<<S::Scalar as Exp>::Output>>::Type>,
+<S::Row as HasSmaller>::Smaller: Array<S::Scalar> + Array<<S::Scalar as Exp>::Output>,
+<S::Dim as HasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<<S::Scalar as Exp>::Output>>::Type>,
 {
     /// The output type
     type Output = S::Concrete;
@@ -1398,8 +1273,8 @@ S: HasConcreteScalarArray<<<S as ScalarArray>::Scalar as Round>::Output>,
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
 S::Row: Dim<<<S as ScalarArray>::Scalar as Round>::Output>,
 S::Dim: TwoDim<<<S as ScalarArray>::Scalar as Round>::Output, S::Row>,
-<S::Row as DimHasSmaller>::Smaller: Array<S::Scalar> + Array<<S::Scalar as Round>::Output>,
-<S::Dim as DimHasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<<S::Scalar as Round>::Output>>::Type>,
+<S::Row as HasSmaller>::Smaller: Array<S::Scalar> + Array<<S::Scalar as Round>::Output>,
+<S::Dim as HasSmaller>::Smaller: Array<<S::Row as Array<S::Scalar>>::Type> + Array<<S::Row as Array<<S::Scalar as Round>::Output>>::Type>,
 {
     /// The output type
     type Output = S::Concrete;
@@ -1424,8 +1299,8 @@ Lhs: HasConcreteScalarArray<<<Lhs as ScalarArray>::Scalar as Clamp<<Rhs as Scala
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
 Lhs::Row: Dim<<<Lhs as ScalarArray>::Scalar as Clamp<<Rhs as ScalarArray>::Scalar>>::Output>,
 Lhs::Dim: TwoDim<<<Lhs as ScalarArray>::Scalar as Clamp<<Rhs as ScalarArray>::Scalar>>::Output, Lhs::Row>,
-<Lhs::Row as DimHasSmaller>::Smaller: Array<Lhs::Scalar> + Array<Rhs::Scalar> + Array<<Lhs::Scalar as Clamp<Rhs::Scalar>>::Output>,
-<Lhs::Dim as DimHasSmaller>::Smaller: Array<<Lhs::Row as Array<Lhs::Scalar>>::Type> + Array<<Rhs::Row as Array<Rhs::Scalar>>::Type> + Array<<Lhs::Row as Array<<Lhs::Scalar as Clamp<Rhs::Scalar>>::Output>>::Type>,
+<Lhs::Row as HasSmaller>::Smaller: Array<Lhs::Scalar> + Array<Rhs::Scalar> + Array<<Lhs::Scalar as Clamp<Rhs::Scalar>>::Output>,
+<Lhs::Dim as HasSmaller>::Smaller: Array<<Lhs::Row as Array<Lhs::Scalar>>::Type> + Array<<Rhs::Row as Array<Rhs::Scalar>>::Type> + Array<<Lhs::Row as Array<<Lhs::Scalar as Clamp<Rhs::Scalar>>::Output>>::Type>,
 {
     /// The output type
     type Output = Lhs::Concrete;
@@ -1480,339 +1355,6 @@ Lhs::Dim: TwoDim<<<Lhs as ScalarArray>::Scalar as Clamp<<Rhs as ScalarArray>::Sc
 // Builds a floating-point number from x and the corresponding integral exponent of 2 in exp:
 //  Tfd  ldexp(Tfd x, in Ti exp)
 */
-
-macro_rules! impl_custom_array_inner {
-    ($id:ident, $size:expr$(, $index:expr)*) => {
-/// An custom array of size $size which has as few restrictions as possible (e.g. doesn't restrict
-/// `Clone` impls to `T: Copy`).
-#[derive(Copy, Debug, PartialEq, PartialOrd, Ord, Eq, Hash)]
-pub struct $id<T>(pub [T; $size]);
-
-impl<T> From<[T; $size]> for $id<T> {
-    fn from(v: [T; $size]) -> Self { $id(v) }
-}
-impl<T> Into<[T; $size]> for $id<T> {
-    fn into(self) -> [T; $size] { self.0 }
-}
-impl<T> AsRef<[T; $size]> for $id<T> {
-    fn as_ref(&self) -> &[T; $size] { &self.0 }
-}
-impl<T> AsMut<[T; $size]> for $id<T> {
-    fn as_mut(&mut self) -> &mut [T; $size] { &mut self.0 }
-}
-impl<T> Borrow<[T; $size]> for $id<T> {
-    fn borrow(&self) -> &[T; $size] { &self.0 }
-}
-impl<T> BorrowMut<[T; $size]> for $id<T> {
-    fn borrow_mut(&mut self) -> &mut [T; $size] { &mut self.0 }
-}
-impl<T> Deref for $id<T> {
-    type Target = [T; $size];
-    fn deref(&self) -> &[T; $size] { &self.0}
-}
-impl<T> DerefMut for $id<T> {
-    fn deref_mut(&mut self) -> &mut [T; $size] { &mut self.0 }
-}
-
-impl<T> AsRef<[T]> for $id<T> {
-    fn as_ref(&self) -> &[T] { self.0.as_ref() }
-}
-impl<T> AsMut<[T]> for $id<T> {
-    fn as_mut(&mut self) -> &mut [T] { self.0.as_mut() }
-}
-impl<T> Borrow<[T]> for $id<T> {
-    fn borrow(&self) -> &[T] { self.0.borrow() }
-}
-impl<T> BorrowMut<[T]> for $id<T> {
-    fn borrow_mut(&mut self) -> &mut [T] { self.0.borrow_mut() }
-}
-
-impl<'a, T> IntoIterator for &'a $id<T> {
-    type Item = &'a T;
-    type IntoIter = <&'a [T;1] as IntoIterator>::IntoIter;
-    fn into_iter(self) -> Self::IntoIter { self.0.into_iter() }
-}
-
-impl<'a, T> IntoIterator for &'a mut $id<T> {
-    type Item = &'a mut T;
-    type IntoIter = <&'a mut [T;1] as IntoIterator>::IntoIter;
-    fn into_iter(self) -> Self::IntoIter { (&mut self.0).into_iter() }
-}
-
-    }
-}
-
-macro_rules! impl_custom_array {
-    ($id:ident) => {
-        impl_custom_array_inner!{$id, 0}
-
-        impl<T> Clone for $id<T> {
-             fn clone(&self) -> Self {
-                $id([])
-             }
-        }
-
-        impl<T> Default for $id<T> {
-             fn default() -> Self {
-                $id([])
-             }
-        }
-    };
-    ($id:ident, $size:expr$(, $index:expr)*) => {
-        impl_custom_array_inner!{$id, $size$(, $index)*}
-
-        impl<T: Clone> Clone for $id<T> {
-             fn clone(&self) -> Self {
-                $id([
-                    $(self.0[$index].clone()),*
-                ])
-             }
-        }
-
-        impl<T: Default> Default for $id<T> {
-             fn default() -> Self {
-                $id([
-                    $({$index; Default::default()}),*
-                ])
-             }
-        }
-    }
-}
-
-macro_rules! impl_array_inner {
-    ($id:ident, $array:ident, $size:expr,
-        from($from_value_v:tt)=>$from_value:expr,
-        apply($apply_lhs:tt, $apply_f:tt)=>$apply:expr,
-        apply_zip($apply_zip_lhs:tt, $apply_zip_rhs:tt, $apply_zip_f:tt)=>$apply_zip:expr,
-        fold($fold_lhs:tt, $fold_init:tt, $fold_f:tt)=>$fold:expr,
-        fold_zip($fold_zip_lhs:tt, $fold_zip_rhs:tt, $fold_zip_init:tt, $fold_zip_f:tt)=>$fold_zip:expr,
-        map($map_lhs:tt, $map_f:tt)=>$map:expr,
-        map_zip($map_zip_lhs:tt, $map_zip_rhs:tt, $map_zip_f:tt)=>$map_zip:expr,
-        transpose($transpose_lhs:tt)=>$transpose:expr,
-        transpose_helper($transpose_helper_lhs:tt)=>$transpose_helper:expr,
-        $($index:expr),*) => (
-#[derive(Clone, Copy, Debug, Default, PartialEq, PartialOrd, Ord, Eq, Hash)]
-pub struct $id;
-
-impl<T> Array<T> for $id {
-    type RawType = [T; $size];
-    type Type = $array<T>;
-
-    #[inline(always)]
-    fn from_value($from_value_v: T) -> Self::Type
-    where T: Clone { $from_value }
-
-    #[inline(always)]
-    fn apply<F>($apply_lhs: Self::Type, $apply_f: F)
-    where F: FnMut(T) { $apply }
-
-    #[inline(always)]
-    fn apply_zip<U, F>($apply_zip_lhs: <Self as Array<T>>::Type, $apply_zip_rhs: <Self as Array<U>>::Type, $apply_zip_f: F)
-    where F: FnMut(T, U) { $apply_zip }
-
-    #[inline(always)]
-    fn fold<O, F>($fold_lhs: Self::Type, $fold_init: O, $fold_f: F) -> O
-    where F: FnMut(O, T)-> O { $fold }
-
-    /// Fold all the elements of two arrays with function `f`
-    #[inline(always)]
-    fn fold_zip<U, O, F>($fold_zip_lhs: <Self as Array<T>>::Type, $fold_zip_rhs: <Self as Array<U>>::Type, $fold_zip_init: O, $fold_zip_f: F) -> O
-    where F: FnMut(O, T, U)-> O { $fold_zip }
-
-    /// Map all the elements of the array with function `f`
-    #[inline(always)]
-    fn map<O, F>($map_lhs: Self::Type, $map_f: F) -> <Self as Array<O>>::Type
-    where F: FnMut(T)-> O { $map }
-
-    /// Combine two arrays into a resulting third array of the same dimension, combining elements
-    /// with the function `f`.
-    #[inline(always)]
-    fn map_zip<U, O, F>($map_zip_lhs: Self::Type, $map_zip_rhs: <Self as Array<U>>::Type, $map_zip_f: F) -> <Self as Array<O>>::Type
-    where F: FnMut(T, U)-> O { $map_zip }
-
-    /// Transpose the elements of a 2d array
-    #[inline(always)]
-    fn transpose<U,S>($transpose_lhs: <Self as Array<T>>::Type) -> <U as Array<<Self as Array<S>>::Type>>::Type
-    where T: AsRef<[S]>+AsMut<[S]>+BorrowMut<[S]>,
-    U: Dim<S, Type=T> + Dim<<Self as Array<S>>::Type>,
-    U::Smaller: Array<S>+Array<<Self as Array<S>>::Type> { $transpose }
-
-    /// A helper to transpose the elements of a 2d array (recursion)
-    #[inline(always)]
-    fn transpose_helper<U>($transpose_helper_lhs: <U as Array<<Self as Array<T>>::Type>>::Type) -> <Self as Array<<U as Array<T>>::Type>>::Type
-    where U: Array<<Self as Array<T>>::Type> + Array<T> { $transpose_helper }
-}
-    );
-}
-
-macro_rules! impl_array {
-    ($id:ident, $array:ident) => (
-        impl_custom_array!{$array}
-        impl_array_inner!{$id, $array, 0,
-            from(_)=>[].into(),
-            apply(_, _)=>(),
-            apply_zip(_, _, _)=>(),
-            fold(_, init, _)=> init,
-            fold_zip(_, _, init, _)=> init,
-            map(_, _)=>[].into(),
-            map_zip(_, _, _)=>[].into(),
-            transpose(_) => <U as Array<<Self as Array<S>>::Type>>::from_value([].into()),
-            transpose_helper(_) => [].into(),
-        }
-    );
-    ($id:ident, $array:ident, $smaller:ty, $size:expr$(, $index:expr;$lh:ident;$rh:ident)*) => (
-        impl_custom_array!{$array, $size, 0$(, $index)*}
-        impl_array_inner!{$id, $array, $size,
-            from(v)=>{
-                $(let $lh = v.clone();)*
-                [v$(, $lh)*].into()
-            },
-            // TODO: remove unsafe. Blocked on rust/issues#37302
-            apply(lhs, f)=>unsafe {
-                let (mut lhs, mut f) = (lhs, f);
-                let lh0 = replace(&mut lhs[0], uninitialized());
-        		$(let $lh = replace(&mut lhs[$index], uninitialized());)*
-        		forget(lhs);
-        		f(lh0);
-                $(f($lh);)*
-            },
-            // TODO: remove unsafe. Blocked on rust/issues#37302
-            apply_zip(lhs, rhs, f)=>unsafe {
-                let (mut lhs, mut rhs, mut f) = (lhs, rhs, f);
-                let lh0 = replace(&mut lhs[0], uninitialized());
-                let rh0 = replace(&mut rhs[0], uninitialized());
-        		$(let $lh = replace(&mut lhs[$index], uninitialized());)*
-        		$(let $rh = replace(&mut rhs[$index], uninitialized());)*
-                forget(lhs);
-        		forget(rhs);
-        		f(lh0, rh0);
-                $(f($lh, $rh);)*
-            },
-            // TODO: remove unsafe. Blocked on rust/issues#37302
-            fold(lhs, init, f)=>unsafe {
-                let (mut lhs, mut f) = (lhs, f);
-                let lh0 = replace(&mut lhs[0], uninitialized());
-        		$(let $lh = replace(&mut lhs[$index], uninitialized());)*
-        		forget(lhs);
-                let init = f(init, lh0);
-                $(let init = f(init, $lh);)*
-        		init
-            },
-            // TODO: remove unsafe. Blocked on rust/issues#37302
-            fold_zip(lhs, rhs, init, f)=>unsafe {
-                let (mut lhs, mut rhs, mut f) = (lhs, rhs, f);
-                let lh0 = replace(&mut lhs[0], uninitialized());
-                let rh0 = replace(&mut rhs[0], uninitialized());
-        		$(let $lh = replace(&mut lhs[$index], uninitialized());)*
-        		$(let $rh = replace(&mut rhs[$index], uninitialized());)*
-                forget(lhs);
-        		forget(rhs);
-                let init = f(init, lh0, rh0);
-                $(let init = f(init, $lh, $rh);)*
-        		init
-            },
-            // TODO: remove unsafe. Blocked on rust/issues#37302
-            map(lhs, f)=>unsafe {
-                let (mut lhs, mut f) = (lhs, f);
-                let lh0 = replace(&mut lhs[0], uninitialized());
-        		$(let $lh = replace(&mut lhs[$index], uninitialized());)*
-        		forget(lhs);
-        		[f(lh0)$(, f($lh))*].into()
-            },
-            // TODO: remove unsafe. Blocked on rust/issues#37302
-            map_zip(lhs, rhs, f)=>unsafe {
-                let (mut lhs, mut rhs, mut f) = (lhs, rhs, f);
-                let lh0 = replace(&mut lhs[0], uninitialized());
-                let rh0 = replace(&mut rhs[0], uninitialized());
-        		$(let $lh = replace(&mut lhs[$index], uninitialized());)*
-        		$(let $rh = replace(&mut rhs[$index], uninitialized());)*
-                forget(lhs);
-        		forget(rhs);
-        		[f(lh0, rh0)$(, f($lh, $rh))*].into()
-            },
-            transpose(lhs) => unsafe {
-                let mut lhs = lhs;
-                let lh0 = replace(&mut lhs[0], uninitialized());
-        		$(let $lh = replace(&mut lhs[$index], uninitialized());)*
-                forget(lhs);
-
-                let lh0 = <U as Dim<S>>::split(lh0);
-        		$(let $lh = U::split($lh);)*
-                let r1 = [lh0.0$(, $lh.0)*].into();
-                let r2 = [lh0.1$(, $lh.1)*].into();
-                let r2 = <U::Smaller as Array<S>>::transpose_helper::<Self>(r2);
-                <U as Dim<<Self as Array<S>>::Type>>::chain(r1, r2)
-            },
-            transpose_helper(lhs) => U::transpose::<Self, T>(lhs),
-            $($index),*
-        }
-
-        impl<T> ArrayRef<T> for $id {
-            #[inline(always)]
-            fn get_ref(lhs: &<Self as Array<T>>::Type) -> <Self as Array<&T>>::Type {
-                let &[ref lh0$(, ref $lh)*] = &lhs.0;
-                [lh0$(, $lh)*].into()
-            }
-        }
-
-        impl<T> ArrayMut<T> for $id {
-            #[inline(always)]
-            fn get_mut(lhs: &mut <Self as Array<T>>::Type) -> <Self as Array<&mut T>>::Type {
-                let &mut[ref mut lh0$(, ref mut $lh)*] = &mut lhs.0;
-                [lh0$(, $lh)*].into()
-            }
-        }
-
-        impl DimHasSmaller for $id {
-            type Smaller = $smaller;
-        }
-
-        impl<T> Dim<T> for $id {
-            /// Split the array into an element and a smaller array
-            #[inline(always)]
-            fn split(lhs: Self::Type) -> (T, <Self::Smaller as Array<T>>::Type) {
-                let mut lhs = lhs;
-                // TODO: fix to remove unsafe. Blocked on rust/issues#37302
-                let result = unsafe {(
-                    replace(&mut lhs[0], uninitialized()),
-                    [$(replace(&mut lhs[$index], uninitialized())),*].into()
-                )};
-                forget(lhs);
-                result
-            }
-
-            /// The opposite of split.
-            #[inline(always)]
-            fn chain(lh0: T, lhs: <Self::Smaller as Array<T>>::Type) -> Self::Type {
-                // TODO: remove unsafe. Blocked on rust/issues#37302
-                let mut lhs = lhs; { let _unused = &mut lhs; }
-                $(let $lh = replace(&mut lhs[$index-1], unsafe { uninitialized() });)*
-                forget(lhs);
-                [lh0$(, $lh)*].into()
-            }
-        }
-        impl<T> DimRef<T> for $id {}
-        impl<T> DimMut<T> for $id {}
-        impl<T, D: Dim<T>> TwoDim<T, D> for $id
-        // TODO: remove elaborted bounds. Blocked on rust/issues#20671
-        where D::Smaller: Array<T>,
-        {}
-        impl<T, D: DimRef<T>> TwoDimRef<T, D> for $id
-        // TODO: remove elaborted bounds. Blocked on rust/issues#20671
-        where for<'a> D::Smaller: Array<T>+Array<&'a T>,
-        {}
-        impl<T, D: DimMut<T>> TwoDimMut<T, D> for $id
-        // TODO: remove elaborted bounds. Blocked on rust/issues#20671
-        where for<'a> D::Smaller: Array<T>+Array<&'a T>+Array<&'a mut T>,
-        {}
-    );
-}
-
-impl_array!{Zero,  CustomArrayZero}
-impl_array!{One,   CustomArrayOne,   Zero,  1}
-impl_array!{Two,   CustomArrayTwo,   One,   2, 1;lh1;rh1}
-impl_array!{Three, CustomArrayThree, Two,   3, 1;lh1;rh1, 2;lh2;rh2}
-impl_array!{Four,  CustomArrayFour,  Three, 4, 1;lh1;rh1, 2;lh2;rh2, 3;lh3;rh3}
 
 //impl Scalar for Option<Ordering> {}
 //impl Scalar for Ordering {}

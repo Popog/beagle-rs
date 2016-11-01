@@ -38,20 +38,24 @@ use std::ops::{
     BitAndAssign,BitOrAssign,BitXorAssign,
     ShlAssign,ShrAssign,
     AddAssign,DivAssign,MulAssign,RemAssign,SubAssign,
-    Index,IndexMut,
+    Deref,DerefMut,
 };
 
 use super::Value;
+use consts::{
+    One,Two,Three,Four,
+    Array,
+    Dim,DimRef,DimMut,
+    TwoDim,TwoDimRef,TwoDimMut,
+};
 use scalar_array::{
-    Array,Dim,DimRef,DimMut,TwoDim,TwoDimRef,TwoDimMut,
     ScalarArray,ScalarArrayVal,ScalarArrayRef,ScalarArrayMut,
     ConcreteScalarArray,HasConcreteScalarArray,HasConcreteVecArray,ConcreteVecArray,
     VecArrayVal,
-    One,Two,Three,Four,
     apply_zip_mut_val,map,map_zip,mul_vector,mul_matrix,
 };
 use scalar_array::array;
-use utils::RefCast;
+use utils::ArrayRefCast;
 use vec::Vec;
 
 /// An row-major array of vectors, written `Mat<R, C, T>` but pronounced 'matrix'.
@@ -142,26 +146,31 @@ R::Smaller: Array<<C as Array<S>>::Type>,
     }
 }
 
-impl<S, C: Dim<S>, R: TwoDim<S, C>> Index<usize> for Mat<R, C, S>
+impl<S, C: Dim<S>, R: TwoDim<S, C>> Deref for Mat<R, C, S>
+where R: Dim<Vec<C, S>>,
+<R as Array<Vec<C, S>>>::Type: Deref<Target=<R as Array<Vec<C, S>>>::RawType>,
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
-where C::Smaller: Array<S>,
-R::Smaller: Array<<C as Array<S>>::Type>,
+C::Smaller: Array<S>,
+R::Smaller: Array<<C as Array<S>>::Type> + Array<Vec<C, S>>,
 {
-    type Output = Vec<C, S>;
+    type Target = <R as Array<Vec<C, S>>>::RawType;
+
     #[inline(always)]
-    fn index(&self, i: usize) -> &Vec<C, S> {
-        RefCast::from_ref(&self.0.as_ref()[i])
+    fn deref(&self) -> &<R as Array<Vec<C, S>>>::RawType {
+        <Vec<C, S> as ArrayRefCast<<C as Array<S>>::Type>>::from_array_ref::<R>(&self.0).deref()
     }
 }
 
-impl<S, C: Dim<S>, R: TwoDim<S, C>> IndexMut<usize> for Mat<R, C, S>
+impl<S, C: Dim<S>, R: TwoDim<S, C>> DerefMut for Mat<R, C, S>
+where R: Dim<Vec<C, S>>,
+<R as Array<Vec<C, S>>>::Type: DerefMut<Target=<R as Array<Vec<C, S>>>::RawType>,
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
-where C::Smaller: Array<S>,
-R::Smaller: Array<<C as Array<S>>::Type>,
+C::Smaller: Array<S>,
+R::Smaller: Array<<C as Array<S>>::Type> + Array<Vec<C, S>>,
 {
     #[inline(always)]
-    fn index_mut(&mut self, i: usize) -> &mut Vec<C, S> {
-        RefCast::from_mut(&mut self.0.as_mut()[i])
+    fn deref_mut(&mut self) -> &mut <R as Array<Vec<C, S>>>::RawType {
+        <Vec<C, S> as ArrayRefCast<<C as Array<S>>::Type>>::from_array_mut::<R>(&mut self.0).deref_mut()
     }
 }
 
@@ -415,7 +424,7 @@ C2::Smaller: Array<T> + Array<S::Output>,
     }
 }
 
-//include!(concat!(env!("OUT_DIR"), "/mat.rs"));
+include!(concat!(env!("OUT_DIR"), "/mat.rs"));
 
 #[cfg(test)]
 mod tests {
@@ -543,5 +552,22 @@ mod tests {
         let b = Mat3x3::new([[  29f64,   31f64,   37f64], [  41f64,   43f64,   47f64], [  53f64,   59f64,   61f64]]);
         let c = Mat3x3::new([[ 446f64,  486f64,  520f64], [1343f64, 1457f64, 1569f64], [2491f64, 2701f64, 2925f64]]);
         assert_eq!(a*b, c);
+    }
+
+    /// Test the `[]` operator
+    #[test]
+    fn test_index() {
+        use vec::Vec3;
+        let m = Mat4x3::new([
+            [   2f64,    3f64,    5f64],
+            [   7f64,   11f64,   13f64],
+            [  17f64,   19f64,   23f64],
+            [  29f64,   31f64,   37f64],
+        ]);
+
+        assert_eq!(m[0], Vec3::new([   2f64,    3f64,    5f64]));
+        assert_eq!(m[1], Vec3::new([   7f64,   11f64,   13f64]));
+        assert_eq!(m[2], Vec3::new([  17f64,   19f64,   23f64]));
+        assert_eq!(m[3], Vec3::new([  29f64,   31f64,   37f64]));
     }
 }

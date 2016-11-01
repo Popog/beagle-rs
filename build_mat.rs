@@ -3,11 +3,10 @@ use std::io::{Write,Result};
 use std::path::Path;
 
 fn declare_mat(f: &mut File) -> Result<()> {
-    for r in 1..5 {
+    for r in 1..4 {
         let r = r+1;
         try!(write!(f,"
-
-impl <T: Scalar+Mul<Output=T>+Neg<Output=T>+Add<Output=T>> Mat{r}<T> {{
+impl <T: Copy+Mul<Output=T>+Neg<Output=T>+Add<Output=T>> Mat{r}<T> {{
     /// The determinant of the matrix
     pub fn determinant(&self) -> T {{\n", r=r));
 
