@@ -52,17 +52,26 @@ a[ZZ] += Vec2::new(1, 3); // error
 
 Also, rust's lack of `IndexGet`/`IndexAssign` traits impose some limitations. Only sequential swizzles like `XY` or `YZW` result in actual `Vec` objects, and thus only they can be directly assigned to. Other swizzles are currently relegated to returning reference objects.
 
-This means you can't assign non-sequential swizzles to sequential swizzles,
+This means you can't never assign to non-sequential swizzles (except through use of `unsafe`, but just don't do that). Also when assigning to `Vec` objects (either simple objects or the result of sequential swizzles), you cannot directly use non-sequential swizzles, as they are not direct Vec objects.
 ```rust
-a[XY] = b[YY]
+a[YX] = Vec2::new(1, 2); // error: non-sequential LHS
+a[XY] = b[YX];           // error: non-sequential RHS
+a[XY] = b[YX].into()     // works
+a[XY] = &b[YX] + v(0)    // works
 ```
-won't work, but
-```rust
-a[XY] = &b[YY] + v(0)
-```
- will.
 
 Note the `&` in the last example. This is a another limitation of non-sequential swizzles. As they are reference objects, and the `Index` operator automatically derefernces in most situations, we must explicitly add the reference back.
+
+As in glsl, you are free to swizzle the result of a swizzle. Note that this can result in what amounts to a sequential swizzle, and as such the result will be a `Vec` object.
+```rust
+a[YX][YX] = Vec2::new(1, 2);
+```
+I literally have no idea why you would ever do this, but you can.
+
+Also as in glsl, since the result of indexing a matrix is a `Vec` object, you are free to swizzle that:
+```rust
+m[0][XY] = Vec2::new(1, 2);
+```
 
 ### This crate requires `nightly`, why?
 
@@ -70,7 +79,7 @@ Sadly yes, for right now `nightly` is required. The things used are:
 * `associated_consts`
 * `advanced_slice_patterns`
 
-I'd be willing to give up `associated_consts`, but `advanced_slice_patterns` are needed, so in for a penny, in for a pound.
+I'd be willing to give up `associated_consts` in favor of static functions for the moment, but `advanced_slice_patterns` are absolutely necessary, so in for a penny, in for a pound.
 
 ### Seems like you've got a lot of `unsafe` in there, Should I be concerned?
 
@@ -80,11 +89,10 @@ After that, the next thing blocking `unsafe` removal is the lack of `IndexGet`/`
 
 There are a few `unsafe` things that won't be going away, however.
 * The fast inverse square root floating point hacking.
-* Cast back and forth between `&[T; 4]` and `&Vec4<T>`.
+* Casting back and forth between references to `[T; 4]`, `CustomArrayFour<T>`, and `Vec4<T>`.
 
 ### What's next?
 
-* Swizzles on swizzles.
 * More component-wise functions.
 * More tests.
 * More documentation.

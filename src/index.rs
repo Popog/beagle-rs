@@ -235,6 +235,15 @@ $($index: IsSmallerThan<D>,)+
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
 D::Smaller: Array<S>;
 
+impl<D, S: Clone, $($index),+> $id<D, S, $($index),+>
+where D: Dim<S>$( + IsLargerThan<$index>)+,
+$($index: IsSmallerThan<D>,)+
+// TODO: remove elaborted bounds. Blocked on rust/issues#20671
+D::Smaller: Array<S>,
+{
+    pub fn vec(&self) -> Vec<$dim, S> { Vec::from_vec_val(self.get_vec_val()) }
+}
+
 impl<S, D, $($index),+> RefCast<Vec<D, S>> for $id<D, S, $($index),+>
 where D: Dim<S>$( + IsLargerThan<$index>)+,
 $($index: IsSmallerThan<D>,)+
@@ -374,10 +383,7 @@ D::Smaller: Array<S>,
 {
      #[inline(always)]
      fn get_vec_val(self) -> $array<S> {
-         let v = self.into_ref().into_ref();
-         $array([
-             $($index::index_array(v).clone(),)+
-         ])
+         (self as &'a $id<D, S, $($index),+>).get_vec_val()
      }
 }
 
@@ -583,10 +589,20 @@ pub mod swizzle {
     use consts::{
         Array,Dim,
         ExtractArray,Constant,IsLargerThan,IsSmallerThan,NotSame,HasSmaller,
-        Zero,One,Two,Three,
+        Zero,One,Two,Three,Four,
+        SelectTwo,SelectThree,SelectFour,
     };
+
     use utils::RefCast;
     use vec::Vec;
+
+    /// A trait for unifying the swizzle helper structs
+    pub trait SwizzleIndex {
+        /// The input type for the swizzle operation
+        type IndexType;
+        /// The input value for the swizzle operation
+        const INDEX: Self::IndexType;
+    }
 
     macro_rules! decl_swizzle {
          ($id:ident, $vec_ref:ident, $($index:ident),+) => {
@@ -605,57 +621,112 @@ pub mod swizzle {
              RefCast::from_ref(self)
         }
     }
-        };
-    }
-    macro_rules! decl_swizzle_extract {
-        ($($id:ident=($($value:ident),+)),+) => {
-            decl_swizzle_extract!{$($id=($($value),+)),+}
-        };
-        ($($id:ident=($($value:ident),+),)+) => {$(
-    /// A struct for assisting in swizzling
-    pub struct $id;
 
-    impl<D, S> Index<$id> for Vec<D, S>
-    where D: Dim<S> + ExtractArray<$($value),+>,
-    $($value: IsSmallerThan<D>,)+
-    D::Extracted: Dim<S>,
+    impl<D, S, $($index,)+ J0, J1> Index<$id<$($index),+>> for Vec2Ref<D, S, J0, J1>
+    where D: Dim<S> + IsLargerThan<J0> + IsLargerThan<J1>,
+    $($index: SelectTwo<J0, J1>,)+
+    Two: Constant$( + IsLargerThan<$index>)+,
+    ($($index::Selected),+): SwizzleIndex,
+    J0: IsSmallerThan<D>,
+    J1: IsSmallerThan<D>,
+    Vec<D, S>: Index<<($($index::Selected),+) as SwizzleIndex>::IndexType>,
     // TODO: remove elaborted bounds. Blocked on rust/issues#20671
     D::Smaller: Array<S>,
-    <D::Extracted as HasSmaller>::Smaller: Array<S>,
     {
-        type Output = Vec<D::Extracted, S>;
-        fn index(&self, _: $id) -> &Self::Output {
-            RefCast::from_ref(D::extract_array_ref(self.into_ref()))
+        type Output = <Vec<D, S> as Index<<($($index::Selected),+) as SwizzleIndex>::IndexType>>::Output;
+        fn index(&self, _: $id<$($index),+>) -> &Self::Output {
+            &self.into_ref()[<($($index::Selected),+) as SwizzleIndex>::INDEX]
         }
     }
 
-    impl<D, S> IndexMut<$id> for Vec<D, S>
-    where D: Dim<S> + ExtractArray<$($value),+>,
-    $($value: IsSmallerThan<D>,)+
-    D::Extracted: Dim<S>,
+    impl<D, S, $($index,)+ J0, J1> IndexMut<$id<$($index),+>> for Vec2Ref<D, S, J0, J1>
+    where D: Dim<S> + IsLargerThan<J0> + IsLargerThan<J1>,
+    $($index: SelectTwo<J0, J1>,)+
+    Two: Constant$( + IsLargerThan<$index>)+,
+    ($($index::Selected),+): SwizzleIndex,
+    J0: IsSmallerThan<D>,
+    J1: IsSmallerThan<D>,
+    Vec<D, S>: IndexMut<<($($index::Selected),+) as SwizzleIndex>::IndexType>,
     // TODO: remove elaborted bounds. Blocked on rust/issues#20671
     D::Smaller: Array<S>,
-    <D::Extracted as HasSmaller>::Smaller: Array<S>,
     {
-        fn index_mut(&mut self, _: $id) -> &mut Self::Output {
-            RefCast::from_mut(D::extract_array_mut(self.into_mut()))
+        fn index_mut(&mut self, _: $id<$($index),+>) -> &mut Self::Output {
+            &mut self.into_mut()[<($($index::Selected),+) as SwizzleIndex>::INDEX]
         }
     }
 
-        )+};
+    impl<D, S, $($index,)+ J0, J1, J2> Index<$id<$($index),+>> for Vec3Ref<D, S, J0, J1, J2>
+    where D: Dim<S> + IsLargerThan<J0> + IsLargerThan<J1> + IsLargerThan<J2>,
+    $($index: SelectThree<J0, J1, J2>,)+
+    Three: Constant$( + IsLargerThan<$index>)+,
+    ($($index::Selected),+): SwizzleIndex,
+    J0: IsSmallerThan<D>,
+    J1: IsSmallerThan<D>,
+    J2: IsSmallerThan<D>,
+    Vec<D, S>: Index<<($($index::Selected),+) as SwizzleIndex>::IndexType>,
+    // TODO: remove elaborted bounds. Blocked on rust/issues#20671
+    D::Smaller: Array<S>,
+    {
+        type Output = <Vec<D, S> as Index<<($($index::Selected),+) as SwizzleIndex>::IndexType>>::Output;
+        fn index(&self, _: $id<$($index),+>) -> &Self::Output {
+            &self.into_ref()[<($($index::Selected),+) as SwizzleIndex>::INDEX]
+        }
     }
 
-    macro_rules! decl_constants {
-        ($swizzle:ident, $($id:ident=($($value:ident),+),)+) => {
-            decl_constants!{$swizzle, $($id=($($value),+)),+}
-        };
-        ($swizzle:ident, $($id:ident=($($value:ident),+)),+) => {$(
-            /// A type alias for assisting in swizzling
-            pub type $id = $swizzle<$($value),+>;
+    impl<D, S, $($index,)+ J0, J1, J2> IndexMut<$id<$($index),+>> for Vec3Ref<D, S, J0, J1, J2>
+    where D: Dim<S> + IsLargerThan<J0> + IsLargerThan<J1> + IsLargerThan<J2>,
+    $($index: SelectThree<J0, J1, J2>,)+
+    Three: Constant$( + IsLargerThan<$index>)+,
+    ($($index::Selected),+): SwizzleIndex,
+    J0: IsSmallerThan<D>,
+    J1: IsSmallerThan<D>,
+    J2: IsSmallerThan<D>,
+    Vec<D, S>: IndexMut<<($($index::Selected),+) as SwizzleIndex>::IndexType>,
+    // TODO: remove elaborted bounds. Blocked on rust/issues#20671
+    D::Smaller: Array<S>,
+    {
+        fn index_mut(&mut self, _: $id<$($index),+>) -> &mut Self::Output {
+            &mut self.into_mut()[<($($index::Selected),+) as SwizzleIndex>::INDEX]
+        }
+    }
 
-            /// Constant for swizzling
-            pub const $id: $id = $swizzle(PhantomData);
-        )+};
+    impl<D, S, $($index,)+ J0, J1, J2, J3> Index<$id<$($index),+>> for Vec4Ref<D, S, J0, J1, J2, J3>
+    where D: Dim<S> + IsLargerThan<J0> + IsLargerThan<J1> + IsLargerThan<J2> + IsLargerThan<J3>,
+    $($index: SelectFour<J0, J1, J2, J3>,)+
+    Four: Constant$( + IsLargerThan<$index>)+,
+    ($($index::Selected),+): SwizzleIndex,
+    J0: IsSmallerThan<D>,
+    J1: IsSmallerThan<D>,
+    J2: IsSmallerThan<D>,
+    J3: IsSmallerThan<D>,
+    Vec<D, S>: Index<<($($index::Selected),+) as SwizzleIndex>::IndexType>,
+    // TODO: remove elaborted bounds. Blocked on rust/issues#20671
+    D::Smaller: Array<S>,
+    {
+        type Output = <Vec<D, S> as Index<<($($index::Selected),+) as SwizzleIndex>::IndexType>>::Output;
+        fn index(&self, _: $id<$($index),+>) -> &Self::Output {
+            &self.into_ref()[<($($index::Selected),+) as SwizzleIndex>::INDEX]
+        }
+    }
+
+    impl<D, S, $($index,)+ J0, J1, J2, J3> IndexMut<$id<$($index),+>> for Vec4Ref<D, S, J0, J1, J2, J3>
+    where D: Dim<S> + IsLargerThan<J0> + IsLargerThan<J1> + IsLargerThan<J2> + IsLargerThan<J3>,
+    $($index: SelectFour<J0, J1, J2, J3>,)+
+    Four: Constant$( + IsLargerThan<$index>)+,
+    ($($index::Selected),+): SwizzleIndex,
+    J0: IsSmallerThan<D>,
+    J1: IsSmallerThan<D>,
+    J2: IsSmallerThan<D>,
+    J3: IsSmallerThan<D>,
+    Vec<D, S>: IndexMut<<($($index::Selected),+) as SwizzleIndex>::IndexType>,
+    // TODO: remove elaborted bounds. Blocked on rust/issues#20671
+    D::Smaller: Array<S>,
+    {
+        fn index_mut(&mut self, _: $id<$($index),+>) -> &mut Self::Output {
+            &mut self.into_mut()[<($($index::Selected),+) as SwizzleIndex>::INDEX]
+        }
+    }
+        };
     }
 
     decl_swizzle!{Swizzle2, Vec2Ref, I0, I1}
@@ -699,6 +770,32 @@ pub mod swizzle {
          fn index_mut(&mut self, _: Swizzle4<I0, I1, I2, I3>) -> &mut Self::Output {
             RefCast::from_mut(self)
          }
+    }
+
+
+    //  .o88b.  .d88b.  d8b   db .d8888. d888888b  .d8b.  d8b   db d888888b
+    // d8P  Y8 .8P  Y8. 888o  88 88'  YP `~~88~~' d8' `8b 888o  88 `~~88~~'
+    // 8P      88    88 88V8o 88 `8bo.      88    88ooo88 88V8o 88    88
+    // 8b      88    88 88 V8o88   `Y8b.    88    88~~~88 88 V8o88    88
+    // Y8b  d8 `8b  d8' 88  V888 db   8D    88    88   88 88  V888    88
+    //  `Y88P'  `Y88P'  VP   V8P `8888Y'    YP    YP   YP VP   V8P    YP
+
+    macro_rules! decl_constants {
+        ($swizzle:ident, $($id:ident=($($value:ident),+),)+) => {
+            decl_constants!{$swizzle, $($id=($($value),+)),+}
+        };
+        ($swizzle:ident, $($id:ident=($($value:ident),+)),+) => {$(
+            /// A type alias for assisting in swizzling
+            pub type $id = $swizzle<$($value),+>;
+
+            /// Constant for swizzling
+            pub const $id: $id = $swizzle(PhantomData);
+
+            impl SwizzleIndex for ($($value,)+) {
+                type IndexType = $id;
+                const INDEX: $id = $id;
+            }
+        )+};
     }
 
     decl_constants!{Swizzle2,
@@ -815,11 +912,202 @@ pub mod swizzle {
         I3330=(Three,Three,Three,Zero), I3331=(Three,Three,Three,One),  I3332=(Three,Three,Three,Two),  I3333=(Three,Three,Three,Three),
     }
 
+
+    // d88888b db    db d888888b d8888b.  .d8b.   .o88b. d888888b
+    // 88'     `8b  d8' `~~88~~' 88  `8D d8' `8b d8P  Y8 `~~88~~'
+    // 88ooooo  `8bd8'     88    88oobY' 88ooo88 8P         88
+    // 88~~~~~  .dPYb.     88    88`8b   88~~~88 8b         88
+    // 88.     .8P  Y8.    88    88 `88. 88   88 Y8b  d8    88
+    // Y88888P YP    YP    YP    88   YD YP   YP  `Y88P'    YP
+
+    /// A struct for assisting in swizzling
+    pub struct SwizzleExtract<I0, I1, I2, I3>(PhantomData<(I0, I1, I2, I3)>)
+    where I0: IsSmallerThan<I3>, I3: IsLargerThan<I0>;
+
+    impl<D, S, I0, I1, I2, I3> Index<SwizzleExtract<I0, I1, I2, I3>> for Vec<D, S>
+    where D: Dim<S> + ExtractArray<I0, I3>,
+    I0: IsSmallerThan<D> + IsSmallerThan<I3>,
+    I3: IsSmallerThan<D> + IsLargerThan<I0>,
+    D::Extracted: Dim<S>,
+    // TODO: remove elaborted bounds. Blocked on rust/issues#20671
+    D::Smaller: Array<S>,
+    <D::Extracted as HasSmaller>::Smaller: Array<S>,
+    {
+        type Output = Vec<D::Extracted, S>;
+        fn index(&self, _: SwizzleExtract<I0, I1, I2, I3>) -> &Self::Output {
+            RefCast::from_ref(D::extract_array_ref(self.into_ref()))
+        }
+    }
+
+    impl<D, S, I0, I1, I2, I3> IndexMut<SwizzleExtract<I0, I1, I2, I3>> for Vec<D, S>
+    where D: Dim<S> + ExtractArray<I0, I3>,
+    I0: IsSmallerThan<D> + IsSmallerThan<I3>,
+    I3: IsSmallerThan<D> + IsLargerThan<I0>,
+    D::Extracted: Dim<S>,
+    // TODO: remove elaborted bounds. Blocked on rust/issues#20671
+    D::Smaller: Array<S>,
+    <D::Extracted as HasSmaller>::Smaller: Array<S>,
+    {
+        fn index_mut(&mut self, _: SwizzleExtract<I0, I1, I2, I3>) -> &mut Self::Output {
+            RefCast::from_mut(D::extract_array_mut(self.into_mut()))
+        }
+    }
+
+    macro_rules! decl_swizzle_extract_vecref {
+         ($id:ident, $dim:ident, $select:ident, $($index:ident),+) => {
+    impl<D, S, J0, J1, $($index),+> Index<SwizzleExtract<J0, (), (), J1>> for $id<D, S, $($index),+>
+    where D: Dim<S>$( + IsLargerThan<$index>)+,
+    J0: $select<$($index),+> + IsSmallerThan<J1>,
+    J1: $select<$($index),+> + IsLargerThan<J0>,
+    $dim: Constant + IsLargerThan<J0> + IsLargerThan<J1>,
+    (J0::Selected, J1::Selected): SwizzleIndex,
+    $($index: IsSmallerThan<D>,)+
+    Vec<D, S>: Index<<(J0::Selected, J1::Selected) as SwizzleIndex>::IndexType>,
+    // TODO: remove elaborted bounds. Blocked on rust/issues#20671
+    D::Smaller: Array<S>,
+    {
+         type Output = <Vec<D, S> as Index<<(J0::Selected, J1::Selected) as SwizzleIndex>::IndexType>>::Output;
+         fn index(&self, _: SwizzleExtract<J0, (), (), J1>) -> &Self::Output {
+             &self.into_ref()[<(J0::Selected, J1::Selected) as SwizzleIndex>::INDEX]
+         }
+    }
+
+    impl<D, S, J0, J1, $($index),+> IndexMut<SwizzleExtract<J0, (), (), J1>> for $id<D, S, $($index),+>
+    where D: Dim<S>$( + IsLargerThan<$index>)+,
+    J0: $select<$($index),+> + IsSmallerThan<J1>,
+    J1: $select<$($index),+> + IsLargerThan<J0>,
+    $dim: Constant + IsLargerThan<J0> + IsLargerThan<J1>,
+    (J0::Selected, J1::Selected): SwizzleIndex,
+    $($index: IsSmallerThan<D>,)+
+    Vec<D, S>: IndexMut<<(J0::Selected, J1::Selected) as SwizzleIndex>::IndexType>,
+    // TODO: remove elaborted bounds. Blocked on rust/issues#20671
+    D::Smaller: Array<S>,
+    {
+        fn index_mut(&mut self, _: SwizzleExtract<J0, (), (), J1>) -> &mut Self::Output {
+            &mut self.into_mut()[<(J0::Selected, J1::Selected) as SwizzleIndex>::INDEX]
+        }
+    }
+
+    impl<D, S, J0, J1, J2, $($index),+> Index<SwizzleExtract<J0, J1, (), J2>> for $id<D, S, $($index),+>
+    where D: Dim<S>$( + IsLargerThan<$index>)+,
+    J0: $select<$($index),+> + IsSmallerThan<J2>,
+    J1: $select<$($index),+>,
+    J2: $select<$($index),+> + IsLargerThan<J0>,
+    $dim: Constant + IsLargerThan<J0> + IsLargerThan<J1> + IsLargerThan<J2>,
+    (J0::Selected, J1::Selected, J2::Selected): SwizzleIndex,
+    $($index: IsSmallerThan<D>,)+
+    Vec<D, S>: Index<<(J0::Selected, J1::Selected, J2::Selected) as SwizzleIndex>::IndexType>,
+    // TODO: remove elaborted bounds. Blocked on rust/issues#20671
+    D::Smaller: Array<S>,
+    {
+        type Output = <Vec<D, S> as Index<<(J0::Selected, J1::Selected, J2::Selected) as SwizzleIndex>::IndexType>>::Output;
+        fn index(&self, _: SwizzleExtract<J0, J1, (), J2>) -> &Self::Output {
+            &self.into_ref()[<(J0::Selected, J1::Selected, J2::Selected) as SwizzleIndex>::INDEX]
+        }
+    }
+
+    impl<D, S, J0, J1, J2, $($index),+> IndexMut<SwizzleExtract<J0, J1, (), J2>> for $id<D, S, $($index),+>
+    where D: Dim<S>$( + IsLargerThan<$index>)+,
+    J0: $select<$($index),+> + IsSmallerThan<J2>,
+    J1: $select<$($index),+>,
+    J2: $select<$($index),+> + IsLargerThan<J0>,
+    $dim: Constant + IsLargerThan<J0> + IsLargerThan<J1> + IsLargerThan<J2>,
+    (J0::Selected, J1::Selected, J2::Selected): SwizzleIndex,
+    $($index: IsSmallerThan<D>,)+
+    Vec<D, S>: IndexMut<<(J0::Selected, J1::Selected, J2::Selected) as SwizzleIndex>::IndexType>,
+    // TODO: remove elaborted bounds. Blocked on rust/issues#20671
+    D::Smaller: Array<S>,
+    {
+        fn index_mut(&mut self, _: SwizzleExtract<J0, J1, (), J2>) -> &mut Self::Output {
+            &mut self.into_mut()[<(J0::Selected, J1::Selected, J2::Selected) as SwizzleIndex>::INDEX]
+        }
+    }
+
+    impl<D, S, J0, J1, J2, J3, $($index),+> Index<SwizzleExtract<J0, J1, J2, J3>> for $id<D, S, $($index),+>
+    where D: Dim<S>$( + IsLargerThan<$index>)+,
+    J0: $select<$($index),+> + IsSmallerThan<J3>,
+    J1: $select<$($index),+>,
+    J2: $select<$($index),+>,
+    J3: $select<$($index),+> + IsLargerThan<J0>,
+    $dim: Constant + IsLargerThan<J0> + IsLargerThan<J1> + IsLargerThan<J2> + IsLargerThan<J3>,
+    (J0::Selected, J1::Selected, J2::Selected, J3::Selected): SwizzleIndex,
+    $($index: IsSmallerThan<D>,)+
+    Vec<D, S>: Index<<(J0::Selected, J1::Selected, J2::Selected, J3::Selected) as SwizzleIndex>::IndexType>,
+    // TODO: remove elaborted bounds. Blocked on rust/issues#20671
+    D::Smaller: Array<S>,
+    {
+        type Output = <Vec<D, S> as Index<<(J0::Selected, J1::Selected, J2::Selected, J3::Selected) as SwizzleIndex>::IndexType>>::Output;
+        fn index(&self, _: SwizzleExtract<J0, J1, J2, J3>) -> &Self::Output {
+            &self.into_ref()[<(J0::Selected, J1::Selected, J2::Selected, J3::Selected) as SwizzleIndex>::INDEX]
+        }
+    }
+
+    impl<D, S, J0, J1, J2, J3, $($index),+> IndexMut<SwizzleExtract<J0, J1, J2, J3>> for $id<D, S, $($index),+>
+    where D: Dim<S>$( + IsLargerThan<$index>)+,
+    J0: $select<$($index),+> + IsSmallerThan<J3>,
+    J1: $select<$($index),+>,
+    J2: $select<$($index),+>,
+    J3: $select<$($index),+> + IsLargerThan<J0>,
+    $dim: Constant + IsLargerThan<J0> + IsLargerThan<J1> + IsLargerThan<J2> + IsLargerThan<J3>,
+    (J0::Selected, J1::Selected, J2::Selected, J3::Selected): SwizzleIndex,
+    $($index: IsSmallerThan<D>,)+
+    Vec<D, S>: IndexMut<<(J0::Selected, J1::Selected, J2::Selected, J3::Selected) as SwizzleIndex>::IndexType>,
+    // TODO: remove elaborted bounds. Blocked on rust/issues#20671
+    D::Smaller: Array<S>,
+    {
+        fn index_mut(&mut self, _: SwizzleExtract<J0, J1, J2, J3>) -> &mut Self::Output {
+            &mut self.into_mut()[<(J0::Selected, J1::Selected, J2::Selected, J3::Selected) as SwizzleIndex>::INDEX]
+        }
+    }
+        };
+    }
+
+    macro_rules! decl_swizzle_extract_inner {
+        ($id:ident=($value_0:ty, $value_1:ty, $value_2:ty, $value_3:ty)) => {
+    /// A type alias for assisting in swizzling
+    pub type $id = SwizzleExtract<$value_0, $value_1, $value_2, $value_3>;
+
+    /// Constant for swizzling
+    pub const $id: $id = SwizzleExtract(PhantomData);
+        };
+    }
+
+    macro_rules! impl_swizzle_extract_inner {
+        ($id:ident=($value_0:ident$(, $value:ident)*; $value_1:ident)) => {
+
+    impl SwizzleIndex for ($value_0, $($value,)* $value_1) {
+        type IndexType = $id;
+        const INDEX: $id = $id;
+    }
+        };
+    }
+    macro_rules! decl_swizzle_extract {
+        ($($id:ident=($($value:ident),+),)+) => {$(
+            decl_swizzle_extract!{$id=($($value),+)}
+        )+};
+        ($id:ident=($value_0:ident, $value_1:ident)) => {
+            decl_swizzle_extract_inner!{$id=($value_0, (), (), $value_1)}
+            impl_swizzle_extract_inner!{$id=($value_0; $value_1)}
+        };
+        ($id:ident=($value_0:ident, $value_1:ident, $value_2:ident)) => {
+            decl_swizzle_extract_inner!{$id=($value_0, $value_1, (), $value_2)}
+            impl_swizzle_extract_inner!{$id=($value_0, $value_1; $value_2)}
+        };
+        ($id:ident=($value_0:ident, $value_1:ident, $value_2:ident, $value_3:ident)) => {
+            decl_swizzle_extract_inner!{$id=($value_0, $value_1, $value_2, $value_3)}
+            impl_swizzle_extract_inner!{$id=($value_0, $value_1, $value_2; $value_3)}
+        };
+    }
+
     decl_swizzle_extract!{
         I01=(Zero,One), I12=(One,Two), I23=(Two,Three),
-        I012=(Zero,Two), I123=(One,Three),
-        I0123=(Zero,Three),
+        I012=(Zero,One,Two), I123=(One,Two,Three),
+        I0123=(Zero,One,Two,Three),
     }
+
+    decl_swizzle_extract_vecref!{Vec2Ref, Two, SelectTwo, I0, I1}
+    decl_swizzle_extract_vecref!{Vec3Ref, Three, SelectThree, I0, I1, I2}
+    decl_swizzle_extract_vecref!{Vec4Ref, Four, SelectFour, I0, I1, I2, I3}
 
     pub mod xyzw {
         pub use super::{
@@ -1126,14 +1414,58 @@ mod tests {
 
     #[test]
     fn test_vec_single() {
-        let v = Vec4::new([1i8 , 2i8 , 3i8 , 4i8 ]);
+        let v = Vec4::new([1, 2, 3, 4]);
         assert_eq!(v[X], 1);
     }
 
     #[test]
     fn test_vec_swizzle_add() {
-        let v = Vec4::new([1i8 , 2i8 , 3i8 , 4i8 ]);
-        assert_eq!(&v[ZWYX] + Vec4::from_value(1i8), Vec4::new([4i8 , 5i8 , 3i8 , 2i8 ]));
+        let v = Vec4::new([1, 2, 3, 4]);
+        assert_eq!(&v[ZWYX] + Vec4::from_value(1), Vec4::new([4, 5, 3, 2]));
+    }
+
+    #[test]
+    fn test_vec_swizzle_assigned() {
+        use vec::Vec2;
+        let mut v = Vec4::new([1, 2, 3, 4]);
+        v[XY] = v[YX].vec();
+        assert_eq!(v, Vec4::new([2, 1, 3, 4]));
+
+        v[XY] = &v[YX] + Vec2::from_value(0);
+        assert_eq!(v, Vec4::new([1, 2, 3, 4]));
+    }
+
+    #[test]
+    fn test_swizzle_mat() {
+        use vec::Vec2;
+        use mat::Mat4;
+        let m = Mat4::new([
+            [   3,    5,    7,   11],
+            [  13,   17,   19,   23],
+            [  29,   31,   37,   41],
+            [  43,   47,   53,   59],
+        ]);
+        assert_eq!(&m[0][WX] + Vec2::new([61, 67]), Vec2::new([72, 70]));
+
+        let mut m = m;
+        m[0][WX] += Vec2::new([61, 67]);
+        assert_eq!(m, Mat4::new([
+            [  70,    5,    7,   72],
+            [  13,   17,   19,   23],
+            [  29,   31,   37,   41],
+            [  43,   47,   53,   59],
+        ]));
+    }
+
+    #[test]
+    fn test_double_swizzle_add() {
+        use vec::Vec2;
+        let v = Vec4::new([3, 5, 7, 11]);
+        assert_eq!(v[YX][YX] + Vec2::new([13, 17]), Vec2::new([16 , 22]));
+
+        let mut v = v;
+        v[YX][YX] += Vec2::new([13, 17]);
+        assert_eq!(v, Vec4::new([16, 22, 7, 11]));
     }
 
     #[test]

@@ -77,6 +77,24 @@ pub trait DecrementIfLargerThan<Rhs: NotSame<Self>>: NotSame<Rhs> {
     type Result: Constant;
 }
 
+/// Types that can be conditionally selected
+pub trait SelectTwo<I0: Constant, I1: Constant>: IsSmallerThan<Two>
+where Two: IsLargerThan<Self> {
+    type Selected: Constant;
+}
+
+/// Types that can be conditionally selected
+pub trait SelectThree<I0: Constant, I1: Constant, I2: Constant>: IsSmallerThan<Three>
+where Three: IsLargerThan<Self> {
+    type Selected: Constant;
+}
+
+/// Types that can be conditionally selected
+pub trait SelectFour<I0: Constant, I1: Constant, I2: Constant, I3: Constant>: IsSmallerThan<Four>
+where Four: IsLargerThan<Self> {
+    type Selected: Constant;
+}
+
 /// Types that represent an array
 pub trait Array<T>: Constant {
     /// A raw array of the size equal to the dimension this type represents.
@@ -887,4 +905,36 @@ impl ExtractArray<Two, Three> for Four {
         let &mut [_, _, ref mut lhs..] = &mut lhs.0;
         (RefCast::from_mut(lhs))
     }
+}
+
+
+impl<I0: Constant, I1: Constant> SelectTwo<I0, I1> for Zero {
+    type Selected = I0;
+}
+impl<I0: Constant, I1: Constant, I2: Constant> SelectThree<I0, I1, I2> for Zero {
+    type Selected = I0;
+}
+impl<I0: Constant, I1: Constant, I2: Constant, I3: Constant> SelectFour<I0, I1, I2, I3> for Zero {
+    type Selected = I0;
+}
+
+impl<I0: Constant, I1: Constant> SelectTwo<I0, I1> for One {
+    type Selected = I1;
+}
+impl<I0: Constant, I1: Constant, I2: Constant> SelectThree<I0, I1, I2> for One {
+    type Selected = I1;
+}
+impl<I0: Constant, I1: Constant, I2: Constant, I3: Constant> SelectFour<I0, I1, I2, I3> for One {
+    type Selected = I1;
+}
+
+impl<I0: Constant, I1: Constant, I2: Constant> SelectThree<I0, I1, I2> for Two {
+    type Selected = I2;
+}
+impl<I0: Constant, I1: Constant, I2: Constant, I3: Constant> SelectFour<I0, I1, I2, I3> for Two {
+    type Selected = I2;
+}
+
+impl<I0: Constant, I1: Constant, I2: Constant, I3: Constant> SelectFour<I0, I1, I2, I3> for Three {
+    type Selected = I3;
 }
