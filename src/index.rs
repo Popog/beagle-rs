@@ -1,4 +1,4 @@
-//! Indexing and Swizzling for Vec
+//! Indexing and Swizzling for `Vec`
 //!
 //! # Examples
 //!

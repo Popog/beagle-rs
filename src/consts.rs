@@ -1,4 +1,4 @@
-//! Traits and functions that emulate integer generics.
+//! Traits and structs that emulate integer generics.
 
 // TODO: more commments
 

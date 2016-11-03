@@ -36,13 +36,13 @@ let a = Vec4::new([3, 5, 7, 11]);
 We can swizzle it to produce a subvector of just the `X` and `Y` components via `a[XY]`. We can even modify `a` through this.
 ```rust
 a[XY] += Vec2::new(1, 3);
-assert_eq!(a, Vec4::new([4, 8, 7, 11]))
+assert_eq!(a, Vec4::new([4, 8, 7, 11]));
 ```
 
 Swizzles can even be used to duplicate components:
 ```rust
 let r = a[ZZZZ] + Vec4::new([1, 2, 3, 4]);
-assert_eq!(r, Vec4::new([12, 13, 14, 15]))
+assert_eq!(r, Vec4::new([12, 13, 14, 15]));
 ```
 
 Like glsl, swizzles with multiple copies of a sinlg ecomponent cannot be modified:
@@ -56,8 +56,8 @@ This means you can't never assign to non-sequential swizzles (except through use
 ```rust
 a[YX] = Vec2::new(1, 2); // error: non-sequential LHS
 a[XY] = b[YX];           // error: non-sequential RHS
-a[XY] = b[YX].into()     // works
-a[XY] = &b[YX] + v(0)    // works
+a[XY] = b[YX].into();    // works
+a[XY] = &b[YX] + v(0);   // works
 ```
 
 Note the `&` in the last example. This is a another limitation of non-sequential swizzles. As they are reference objects, and the `Index` operator automatically derefernces in most situations, we must explicitly add the reference back.
