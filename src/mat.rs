@@ -52,7 +52,7 @@ use scalar_array::{
     ScalarArray,ScalarArrayVal,ScalarArrayRef,ScalarArrayMut,
     ConcreteScalarArray,HasConcreteScalarArray,HasConcreteVecArray,ConcreteVecArray,
     VecArrayVal,
-    apply_zip_mut_val,map,map_zip,mul_vector,mul_matrix,
+    apply2_mut_val,map,map2,mul_vector,mul_matrix,
 };
 use scalar_array::array;
 use utils::ArrayRefCast;
@@ -257,7 +257,7 @@ R::Smaller: Array<<C as Array<S>>::Type>,
         let lhs = <R as Array<<C as Array<Lhs::Scalar>>::Type>>::from_value(lhs.get_vec_val());
         let rhs = <R as Array<Rhs::Scalar>>::map(rhs.get_vec_val(), C::from_value);
 
-        Mat::from_val(array::map_zip::<Lhs::Scalar, C, R, _, _, _>(lhs, rhs, |lhs, rhs| lhs * rhs))
+        Mat::from_val(array::map2::<Lhs::Scalar, C, R, _, _, _>(lhs, rhs, |lhs, rhs| lhs * rhs))
     }
 
     // TODO: Matrix functions
@@ -298,7 +298,7 @@ C::Smaller: Array<S> + Array<Rhs::Scalar> + Array<S::Output>,
 R::Smaller: Array<<C as Array<S>>::Type> + Array<<C as Array<Rhs::Scalar>>::Type> + Array<<C as Array<S::Output>>::Type>,
 {
     type Output = Mat<R, C, S::Output>;
-    fn $method_name(self, rhs: Rhs) -> Self::Output { map_zip(self, rhs, $trait_name::$method_name) }
+    fn $method_name(self, rhs: Rhs) -> Self::Output { map2(self, rhs, $trait_name::$method_name) }
 }
     };
 
@@ -315,7 +315,7 @@ R::Smaller: Array<<C as Array<S>>::Type> + Array<<C as Array<Rhs>>::Type> + Arra
 {
     type Output = Mat<R, C, S::Output>;
     fn $method_name(self, rhs: Value<Rhs>) -> Self::Output {
-        map_zip(self, Mat::from_val(R::from_value(C::from_value(rhs.0))), $trait_name::$method_name)
+        map2(self, Mat::from_val(R::from_value(C::from_value(rhs.0))), $trait_name::$method_name)
     }
 }
 impl<S, C: Dim<S>, R: TwoDim<S, C>, Lhs> $trait_name<Mat<R, C, S>> for Value<Lhs>
@@ -330,7 +330,7 @@ R::Smaller: Array<<C as Array<S>>::Type> + Array<<C as Array<Lhs>>::Type> + Arra
 {
     type Output = Mat<R, C, Lhs::Output>;
     fn $method_name(self, rhs: Mat<R, C, S>) -> Self::Output {
-        map_zip(Mat::<_, _, Lhs>::from_val(R::from_value(C::from_value(self.0))), rhs, $trait_name::$method_name)
+        map2(Mat::<_, _, Lhs>::from_val(R::from_value(C::from_value(self.0))), rhs, $trait_name::$method_name)
     }
 }
     };
@@ -352,7 +352,7 @@ S: $trait_name<Rhs::Scalar>,
 for<'a> C::Smaller: Array<S> + Array<Rhs::Scalar> + Array<&'a S> + Array<&'a mut S>,
 for<'a> R::Smaller: Array<<C as Array<S>>::Type> + Array<<C as Array<Rhs::Scalar>>::Type> + Array<<C as Array<&'a S>>::Type> + Array<<C as Array<&'a mut S>>::Type>,
 {
-    fn $method_name(&mut self, rhs: Rhs) { apply_zip_mut_val(self, rhs, $trait_name::$method_name) }
+    fn $method_name(&mut self, rhs: Rhs) { apply2_mut_val(self, rhs, $trait_name::$method_name) }
 }
     };
 
@@ -368,7 +368,7 @@ for<'a> C::Smaller: Array<S> + Array<Rhs> + Array<&'a S> + Array<&'a mut S>,
 for<'a> R::Smaller: Array<<C as Array<S>>::Type> + Array<<C as Array<Rhs>>::Type> + Array<<C as Array<&'a S>>::Type> + Array<<C as Array<&'a mut S>>::Type>,
 {
     fn $method_name(&mut self, rhs: Value<Rhs>) {
-        apply_zip_mut_val(self, Mat::from_val(R::from_value(C::from_value(rhs.0))), $trait_name::$method_name)
+        apply2_mut_val(self, Mat::from_val(R::from_value(C::from_value(rhs.0))), $trait_name::$method_name)
     }
 }
     };

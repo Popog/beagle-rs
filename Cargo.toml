@@ -1,6 +1,6 @@
 [package]
 name = "beagle"
-version = "0.1.3"
+version = "0.1.4"
 authors = ["Popog"]
 description = "A basic linear algebra library for computer graphics."
 build = "build.rs"
@@ -8,3 +8,6 @@ repository = "https://github.com/Popog/beagle-rs"
 readme = "README.md"
 keywords = ["gamedev", "math", "matrix", "vector"]
 license = "MIT/Apache-2.0"
+
+[profile.test]
+opt-level = 3

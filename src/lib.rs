@@ -5,6 +5,7 @@
 #![feature(associated_consts)]
 #![feature(slice_patterns)]
 #![feature(advanced_slice_patterns)]
+#![cfg_attr(test, feature(float_extras))]
 
 #![allow(unknown_lints)]
 #![allow(inline_always)]

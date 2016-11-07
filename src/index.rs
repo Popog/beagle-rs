@@ -36,7 +36,7 @@ use scalar_array::{
     VecArrayVal,VecArrayRef,
     HasConcreteScalarArray,HasConcreteVecArray,
     ConcreteVecArray,
-    apply_zip_mut_val,
+    apply2_mut_val,
 };
 use vec::{Vec};
 
@@ -181,7 +181,7 @@ $D::Smaller: Array<$S>,
 {
     fn $method_name(&mut self, rhs: Rhs) {
         let mut v = self;
-        apply_zip_mut_val(&mut v, rhs, $trait_name::$method_name)
+        apply2_mut_val(&mut v, rhs, $trait_name::$method_name)
     }
 }
     };
@@ -198,7 +198,7 @@ D::Smaller: Array<S>,
 {
     fn $method_name(&mut self, rhs: Value<Rhs>) {
         let mut v = self;
-        apply_zip_mut_val(&mut v, Vec::from_vec_val($dim::from_value(rhs.0)), $trait_name::$method_name)
+        apply2_mut_val(&mut v, Vec::from_vec_val($dim::from_value(rhs.0)), $trait_name::$method_name)
     }
 }
     };

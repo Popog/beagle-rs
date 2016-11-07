@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/Popog/beagle-rs.svg?branch=master)](https://travis-ci.org/Popog/beagle-rs)
 [![Version](https://img.shields.io/crates/v/beagle.svg)](https://crates.io/crates/beagle)
-[![License](https://img.shields.io/crates/l/beagle.svg)](https://github.com/Popog/beagle-rs/blob/gh-pages/LICENSE)
+![License](https://img.shields.io/crates/l/beagle.svg)
 [![Downloads](https://img.shields.io/crates/d/beagle.svg)](https://crates.io/crates/beagle)
 
 [Documentation](http://Popog.github.io/beagle-rs)
@@ -88,12 +88,11 @@ Yes, please voice your concern on [rust-lang/rust#37302](https://github.com/rust
 After that, the next thing blocking `unsafe` removal is the lack of `IndexGet`/`IndexAssign` for swizzles. `unsafe` is used to get slightly around this for some cases, but it's a bit of a hack until [rust-lang/rfcs#997](https://github.com/rust-lang/rfcs/issues/997) goes anywhere.
 
 There are a few `unsafe` things that won't be going away, however.
-* The fast inverse square root floating point hacking.
+* The `FloatTransmute` implementations.
 * Casting back and forth between references to `[T; 4]`, `CustomArrayFour<T>`, and `Vec4<T>`.
 
 ### What's next?
 
-* More component-wise functions.
 * More tests.
 * More documentation.
 

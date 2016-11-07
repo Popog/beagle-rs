@@ -21,7 +21,7 @@ pub trait NotSame<C: NotSame<Self>>: Constant {}
 pub trait IsSmallerThan<C: IsLargerThan<Self> + NotSame<Self>>: NotSame<C> {
     /// Index an array of size `C` safely.
     #[inline(always)]
-    fn index_array<T>(lhs: &C::Type) -> &T
+    fn index_array<T>(a0: &C::Type) -> &T
     where C: Array<T>;
 }
 
@@ -41,7 +41,7 @@ pub trait HasLarger: NotSame<<Self as HasLarger>::Larger> {
 /// Types that can have an array position extracted.
 pub trait ExtractItem<Rhs: IsSmallerThan<Self>>: IsLargerThan<Rhs> {
     #[inline(always)]
-    fn extract<T>(lhs: Self::Type) -> (T, <Self::Smaller as Array<T>>::Type)
+    fn extract<T>(a0: Self::Type) -> (T, <Self::Smaller as Array<T>>::Type)
     where Self: Dim<T>,
     // TODO: remove elaborted bounds. Blocked on rust/issues#20671
     Self::Smaller: Array<T>;
@@ -55,7 +55,7 @@ Upper: IsSmallerThan<Self> + IsLargerThan<Lower> {
     type Extracted: Constant;
 
     #[inline(always)]
-    fn extract_array_ref<T>(lhs: &Self::Type) -> &<Self::Extracted as Array<T>>::Type
+    fn extract_array_ref<T>(a0: &Self::Type) -> &<Self::Extracted as Array<T>>::Type
     where Self: Dim<T>,
     Self::Extracted: Dim<T>,
     // TODO: remove elaborted bounds. Blocked on rust/issues#20671
@@ -63,7 +63,7 @@ Upper: IsSmallerThan<Self> + IsLargerThan<Lower> {
     Self::Smaller: Array<T>;
 
     #[inline(always)]
-    fn extract_array_mut<T>(lhs: &mut Self::Type) -> &mut <Self::Extracted as Array<T>>::Type
+    fn extract_array_mut<T>(a0: &mut Self::Type) -> &mut <Self::Extracted as Array<T>>::Type
     where Self: Dim<T>,
     Self::Extracted: Dim<T>,
     // TODO: remove elaborted bounds. Blocked on rust/issues#20671
@@ -110,36 +110,46 @@ pub trait Array<T>: Constant {
 
     /// Apply `f` to all the elements of the array
     #[inline(always)]
-    fn apply<F: FnMut(T)>(lhs: Self::Type, f: F);
+    fn apply<F: FnMut(T)>(a0: Self::Type, f: F);
 
     /// Apply `f` to all elements of two arrays.
     #[inline(always)]
-    fn apply_zip<U, F>(lhs: <Self as Array<T>>::Type, rhs: <Self as Array<U>>::Type, f: F)
+    fn apply2<U, F>(a0: <Self as Array<T>>::Type, a1: <Self as Array<U>>::Type, f: F)
     where Self: Array<U>, F: FnMut(T, U);
 
     /// Fold all the elements of the array with function `f`
     #[inline(always)]
-    fn fold<O, F>(lhs: Self::Type, init: O, f: F) -> O
+    fn fold<O, F>(a0: Self::Type, init: O, f: F) -> O
     where F: FnMut(O, T)-> O;
 
     /// Fold all the elements of two arrays with function `f`
     #[inline(always)]
-    fn fold_zip<U, O, F>(lhs: <Self as Array<T>>::Type, rhs: <Self as Array<U>>::Type, init: O, f: F) -> O
+    fn fold2<U, O, F>(a0: <Self as Array<T>>::Type, a1: <Self as Array<U>>::Type, init: O, f: F) -> O
     where Self: Array<U>, F: FnMut(O, T, U)-> O;
 
     /// Map all the elements of the array with function `f`
     #[inline(always)]
-    fn map<O, F>(lhs: <Self as Array<T>>::Type, f: F) -> <Self as Array<O>>::Type
+    fn map<O, F>(a0: <Self as Array<T>>::Type, f: F) -> <Self as Array<O>>::Type
     where Self: Array<O>, F: FnMut(T)-> O;
+
+    /// Map all the elements into two arrays with function `f`
+    #[inline(always)]
+    fn map_into_2<O1, O2, F>(a0: <Self as Array<T>>::Type, f: F) -> (<Self as Array<O1>>::Type, <Self as Array<O2>>::Type)
+    where Self: Array<O1>+Array<O2>, F: FnMut(T)-> (O1, O2);
 
     /// Map all the elements of two arrays with function `f`
     #[inline(always)]
-    fn map_zip<U, O, F>(lhs: <Self as Array<T>>::Type, rhs: <Self as Array<U>>::Type, f: F) -> <Self as Array<O>>::Type
+    fn map2<U, O, F>(a0: <Self as Array<T>>::Type, a1: <Self as Array<U>>::Type, f: F) -> <Self as Array<O>>::Type
     where Self: Array<U>+Array<O>, F: FnMut(T, U)-> O;
+
+    /// Map all the elements of three arrays with function `f`
+    #[inline(always)]
+    fn map3<T2, T3, O, F>(a0: <Self as Array<T>>::Type, a1: <Self as Array<T2>>::Type, a2: <Self as Array<T3>>::Type, f: F) -> <Self as Array<O>>::Type
+    where Self: Array<T2> + Array<T3> + Array<O>, F: FnMut(T, T2, T3)-> O;
 
     /// Transpose the elements of a 2d array
     #[inline(always)]
-    fn transpose<U,S>(lhs: <Self as Array<T>>::Type) -> <U as Array<<Self as Array<S>>::Type>>::Type
+    fn transpose<U,S>(a0: <Self as Array<T>>::Type) -> <U as Array<<Self as Array<S>>::Type>>::Type
     where Self: Array<S>,
     U: Dim<S, Type=T> + Dim<<Self as Array<S>>::Type>,
     // TODO: remove elaborted bounds. Blocked on rust/issues#20671
@@ -147,7 +157,7 @@ pub trait Array<T>: Constant {
 
     /// A helper to transpose the elements of a 2d array (recursion)
     #[inline(always)]
-    fn transpose_helper<U>(lhs: <U as Array<<Self as Array<T>>::Type>>::Type) -> <Self as Array<<U as Array<T>>::Type>>::Type
+    fn transpose_helper<U>(a0: <U as Array<<Self as Array<T>>::Type>>::Type) -> <Self as Array<<U as Array<T>>::Type>>::Type
     where U: Array<<Self as Array<T>>::Type> + Array<T>,
     Self: Array<<U as Array<T>>::Type>;
 }
@@ -155,13 +165,13 @@ pub trait Array<T>: Constant {
 pub trait ArrayRef<T>: Array<T>
 where for<'a> Self: Array<&'a T> {
     #[inline(always)]
-    fn get_ref(lhs: &<Self as Array<T>>::Type) -> <Self as Array<&T>>::Type;
+    fn get_ref(a0: &<Self as Array<T>>::Type) -> <Self as Array<&T>>::Type;
 }
 
 pub trait ArrayMut<T>: ArrayRef<T>
 where for<'a> Self: Array<&'a mut T> {
     #[inline(always)]
-    fn get_mut(lhs: &mut <Self as Array<T>>::Type) -> <Self as Array<&mut T>>::Type;
+    fn get_mut(a0: &mut <Self as Array<T>>::Type) -> <Self as Array<&mut T>>::Type;
 }
 
 /// Types that represent a dimension.
@@ -169,23 +179,23 @@ pub trait Dim<T>: Array<T> + HasSmaller
 where Self::Smaller: Array<T> {
     /// Split the array into an element and a smaller array.
     #[inline(always)]
-    fn split(lhs: Self::Type) -> (T, <Self::Smaller as Array<T>>::Type);
+    fn split(a0: Self::Type) -> (T, <Self::Smaller as Array<T>>::Type);
 
     /// Split the array into a reference to an element and a reference to a smaller array.
     #[inline(always)]
-    fn split_ref(lhs: &Self::Type) -> (&T, &<Self::Smaller as Array<T>>::Type);
+    fn split_ref(a0: &Self::Type) -> (&T, &<Self::Smaller as Array<T>>::Type);
 
     /// Split the array into a reference to a smaller array and a reference to an element.
     #[inline(always)]
-    fn split_ref_end(lhs: &Self::Type) -> (&<Self::Smaller as Array<T>>::Type, &T);
+    fn split_ref_end(a0: &Self::Type) -> (&<Self::Smaller as Array<T>>::Type, &T);
 
     /// Split the array into a mutable reference to an element and a mutable reference to a smaller array.
     #[inline(always)]
-    fn split_mut(lhs: &mut Self::Type) -> (&mut T, &mut <Self::Smaller as Array<T>>::Type);
+    fn split_mut(a0: &mut Self::Type) -> (&mut T, &mut <Self::Smaller as Array<T>>::Type);
 
     /// Split the array into a mutable reference to a smaller array and a mutable reference to an element.
     #[inline(always)]
-    fn split_mut_end(lhs: &mut Self::Type) -> (&mut <Self::Smaller as Array<T>>::Type, &mut T);
+    fn split_mut_end(a0: &mut Self::Type) -> (&mut <Self::Smaller as Array<T>>::Type, &mut T);
 
     /// The opposite of split.
     #[inline(always)]
@@ -345,16 +355,18 @@ macro_rules! impl_custom_array {
 macro_rules! impl_array_inner {
     ($id:ident, $array:ident, $size:expr,
         from($from_value_v:tt)=>$from_value:expr,
-        apply($apply_lhs:tt, $apply_f:tt)=>$apply:expr,
-        apply_zip($apply_zip_lhs:tt, $apply_zip_rhs:tt, $apply_zip_f:tt)=>$apply_zip:expr,
-        fold($fold_lhs:tt, $fold_init:tt, $fold_f:tt)=>$fold:expr,
-        fold_zip($fold_zip_lhs:tt, $fold_zip_rhs:tt, $fold_zip_init:tt, $fold_zip_f:tt)=>$fold_zip:expr,
-        map($map_lhs:tt, $map_f:tt)=>$map:expr,
-        map_zip($map_zip_lhs:tt, $map_zip_rhs:tt, $map_zip_f:tt)=>$map_zip:expr,
-        transpose($transpose_lhs:tt)=>$transpose:expr,
-        transpose_helper($transpose_helper_lhs:tt)=>$transpose_helper:expr,
-        array_ref($array_ref_lhs:tt)=>$array_ref:expr,
-        array_mut($array_mut_lhs:tt)=>$array_mut:expr,
+        apply($apply_a0:tt, $apply_f:tt)=>$apply:expr,
+        apply2($apply2_a0:tt, $apply2_a1:tt, $apply2_f:tt)=>$apply2:expr,
+        fold($fold_a0:tt, $fold_init:tt, $fold_f:tt)=>$fold:expr,
+        fold2($fold2_a0:tt, $fold2_a1:tt, $fold2_init:tt, $fold2_f:tt)=>$fold2:expr,
+        map($map_a0:tt, $map_f:tt)=>$map:expr,
+        map_into_2($map_into_2_a0:tt, $map_into_2_f:tt)=>$map_into_2:expr,
+        map2($map2_a0:tt, $map2_a1:tt, $map2_f:tt)=>$map2:expr,
+        map3($map3_a0:tt, $map3_a1:tt, $map3_a2:tt, $map3_f:tt)=>$map3:expr,
+        transpose($transpose_a0:tt)=>$transpose:expr,
+        transpose_helper($transpose_helper_a0:tt)=>$transpose_helper:expr,
+        array_ref($array_ref_a0:tt)=>$array_ref:expr,
+        array_mut($array_mut_a0:tt)=>$array_mut:expr,
         $($index:expr),*) => (
 #[derive(Clone, Copy, Debug, Default, PartialEq, PartialOrd, Ord, Eq, Hash)]
 pub struct $id;
@@ -372,49 +384,57 @@ impl<T> Array<T> for $id {
     where T: Clone { $from_value }
 
     #[inline(always)]
-    fn apply<F>($apply_lhs: Self::Type, $apply_f: F)
+    fn apply<F>($apply_a0: Self::Type, $apply_f: F)
     where F: FnMut(T) { $apply }
 
     #[inline(always)]
-    fn apply_zip<U, F>($apply_zip_lhs: <Self as Array<T>>::Type, $apply_zip_rhs: <Self as Array<U>>::Type, $apply_zip_f: F)
-    where F: FnMut(T, U) { $apply_zip }
+    fn apply2<U, F>($apply2_a0: <Self as Array<T>>::Type, $apply2_a1: <Self as Array<U>>::Type, $apply2_f: F)
+    where F: FnMut(T, U) { $apply2 }
 
     #[inline(always)]
-    fn fold<O, F>($fold_lhs: Self::Type, $fold_init: O, $fold_f: F) -> O
+    fn fold<O, F>($fold_a0: Self::Type, $fold_init: O, $fold_f: F) -> O
     where F: FnMut(O, T)-> O { $fold }
 
     #[inline(always)]
-    fn fold_zip<U, O, F>($fold_zip_lhs: <Self as Array<T>>::Type, $fold_zip_rhs: <Self as Array<U>>::Type, $fold_zip_init: O, $fold_zip_f: F) -> O
-    where F: FnMut(O, T, U)-> O { $fold_zip }
+    fn fold2<U, O, F>($fold2_a0: <Self as Array<T>>::Type, $fold2_a1: <Self as Array<U>>::Type, $fold2_init: O, $fold2_f: F) -> O
+    where F: FnMut(O, T, U)-> O { $fold2 }
 
     #[inline(always)]
-    fn map<O, F>($map_lhs: Self::Type, $map_f: F) -> <Self as Array<O>>::Type
+    fn map<O, F>($map_a0: Self::Type, $map_f: F) -> <Self as Array<O>>::Type
     where F: FnMut(T)-> O { $map }
 
     #[inline(always)]
-    fn map_zip<U, O, F>($map_zip_lhs: Self::Type, $map_zip_rhs: <Self as Array<U>>::Type, $map_zip_f: F) -> <Self as Array<O>>::Type
-    where F: FnMut(T, U)-> O { $map_zip }
+    fn map_into_2<O1, O2, F>($map_into_2_a0: <Self as Array<T>>::Type, $map_into_2_f: F) -> (<Self as Array<O1>>::Type, <Self as Array<O2>>::Type)
+    where F: FnMut(T)-> (O1, O2) { $map_into_2 }
 
     #[inline(always)]
-    fn transpose<U,S>($transpose_lhs: <Self as Array<T>>::Type) -> <U as Array<<Self as Array<S>>::Type>>::Type
+    fn map2<U, O, F>($map2_a0: Self::Type, $map2_a1: <Self as Array<U>>::Type, $map2_f: F) -> <Self as Array<O>>::Type
+    where F: FnMut(T, U)-> O { $map2 }
+
+    #[inline(always)]
+    fn map3<T2, T3, O, F>($map3_a0: <Self as Array<T>>::Type, $map3_a1: <Self as Array<T2>>::Type, $map3_a2: <Self as Array<T3>>::Type, $map3_f: F) -> <Self as Array<O>>::Type
+    where F: FnMut(T, T2, T3)-> O { $map3 }
+
+    #[inline(always)]
+    fn transpose<U,S>($transpose_a0: <Self as Array<T>>::Type) -> <U as Array<<Self as Array<S>>::Type>>::Type
     where U: Dim<S, Type=T> + Dim<<Self as Array<S>>::Type>,
     U::Smaller: Array<S>+Array<<Self as Array<S>>::Type> { $transpose }
 
     #[inline(always)]
-    fn transpose_helper<U>($transpose_helper_lhs: <U as Array<<Self as Array<T>>::Type>>::Type) -> <Self as Array<<U as Array<T>>::Type>>::Type
+    fn transpose_helper<U>($transpose_helper_a0: <U as Array<<Self as Array<T>>::Type>>::Type) -> <Self as Array<<U as Array<T>>::Type>>::Type
     where U: Array<<Self as Array<T>>::Type> + Array<T> { $transpose_helper }
 }
 
 impl<T> ArrayRef<T> for $id {
     #[inline(always)]
-    fn get_ref($array_ref_lhs: &<Self as Array<T>>::Type) -> <Self as Array<&T>>::Type {
+    fn get_ref($array_ref_a0: &<Self as Array<T>>::Type) -> <Self as Array<&T>>::Type {
         $array_ref
     }
 }
 
 impl<T> ArrayMut<T> for $id {
     #[inline(always)]
-    fn get_mut($array_mut_lhs: &mut <Self as Array<T>>::Type) -> <Self as Array<&mut T>>::Type {
+    fn get_mut($array_mut_a0: &mut <Self as Array<T>>::Type) -> <Self as Array<&mut T>>::Type {
         $array_mut
     }
 }
@@ -427,163 +447,189 @@ macro_rules! impl_array {
         impl_array_inner!{$id, $array, 0,
             from(_)=>[].into(),
             apply(_, _)=>(),
-            apply_zip(_, _, _)=>(),
+            apply2(_, _, _)=>(),
             fold(_, init, _)=> init,
-            fold_zip(_, _, init, _)=> init,
+            fold2(_, _, init, _)=> init,
             map(_, _)=>[].into(),
-            map_zip(_, _, _)=>[].into(),
+            map_into_2(_, _)=>([].into(), [].into()),
+            map2(_, _, _)=>[].into(),
+            map3(_, _, _, _)=>[].into(),
             transpose(_) => <U as Array<<Self as Array<S>>::Type>>::from_value([].into()),
             transpose_helper(_) => [].into(),
             array_ref(_) => [].into(),
             array_mut(_) => [].into(),
         }
     );
-    ($id:ident, $array:ident, $size:expr$(, $index:expr;$lh:ident;$rh:ident)*) => (
+    ($id:ident, $array:ident, $size:expr$(, $index:expr;$a0v1:ident;$a1v1:ident;$a2v1:ident)*) => (
         impl_custom_array!{$array, $size, 0$(, $index)*}
         impl_array_inner!{$id, $array, $size,
             from(v)=>{
-                $(let $lh = v.clone();)*
-                [v$(, $lh)*].into()
+                $(let $a0v1 = v.clone();)*
+                [v$(, $a0v1)*].into()
             },
             // TODO: remove unsafe. Blocked on rust-lang/rust#37302
-            apply(lhs, f)=>unsafe {
-                let (mut lhs, mut f) = (lhs, f);
-                let lh0 = replace(&mut lhs[0], uninitialized());
-        		$(let $lh = replace(&mut lhs[$index], uninitialized());)*
-        		forget(lhs);
-        		f(lh0);
-                $(f($lh);)*
+            apply(a0, f)=>unsafe {
+                let (mut a0, mut f) = (a0, f);
+                let a0v0 = replace(&mut a0[0], uninitialized());
+        		$(let $a0v1 = replace(&mut a0[$index], uninitialized());)*
+        		forget(a0);
+        		f(a0v0);
+                $(f($a0v1);)*
             },
             // TODO: remove unsafe. Blocked on rust-lang/rust#37302
-            apply_zip(lhs, rhs, f)=>unsafe {
-                let (mut lhs, mut rhs, mut f) = (lhs, rhs, f);
-                let lh0 = replace(&mut lhs[0], uninitialized());
-                let rh0 = replace(&mut rhs[0], uninitialized());
-        		$(let $lh = replace(&mut lhs[$index], uninitialized());)*
-        		$(let $rh = replace(&mut rhs[$index], uninitialized());)*
-                forget(lhs);
-        		forget(rhs);
-        		f(lh0, rh0);
-                $(f($lh, $rh);)*
+            apply2(a0, a1, f)=>unsafe {
+                let (mut a0, mut a1, mut f) = (a0, a1, f);
+                let a0v0 = replace(&mut a0[0], uninitialized());
+                let a1v0 = replace(&mut a1[0], uninitialized());
+        		$(let $a0v1 = replace(&mut a0[$index], uninitialized());)*
+        		$(let $a1v1 = replace(&mut a1[$index], uninitialized());)*
+                forget(a0);
+        		forget(a1);
+        		f(a0v0, a1v0);
+                $(f($a0v1, $a1v1);)*
             },
             // TODO: remove unsafe. Blocked on rust-lang/rust#37302
-            fold(lhs, init, f)=>unsafe {
-                let (mut lhs, mut f) = (lhs, f);
-                let lh0 = replace(&mut lhs[0], uninitialized());
-        		$(let $lh = replace(&mut lhs[$index], uninitialized());)*
-        		forget(lhs);
-                let init = f(init, lh0);
-                $(let init = f(init, $lh);)*
+            fold(a0, init, f)=>unsafe {
+                let (mut a0, mut f) = (a0, f);
+                let a0v0 = replace(&mut a0[0], uninitialized());
+        		$(let $a0v1 = replace(&mut a0[$index], uninitialized());)*
+        		forget(a0);
+                let init = f(init, a0v0);
+                $(let init = f(init, $a0v1);)*
         		(init)
             },
             // TODO: remove unsafe. Blocked on rust-lang/rust#37302
-            fold_zip(lhs, rhs, init, f)=>unsafe {
-                let (mut lhs, mut rhs, mut f) = (lhs, rhs, f);
-                let lh0 = replace(&mut lhs[0], uninitialized());
-                let rh0 = replace(&mut rhs[0], uninitialized());
-        		$(let $lh = replace(&mut lhs[$index], uninitialized());)*
-        		$(let $rh = replace(&mut rhs[$index], uninitialized());)*
-                forget(lhs);
-        		forget(rhs);
-                let init = f(init, lh0, rh0);
-                $(let init = f(init, $lh, $rh);)*
+            fold2(a0, a1, init, f)=>unsafe {
+                let (mut a0, mut a1, mut f) = (a0, a1, f);
+                let a0v0 = replace(&mut a0[0], uninitialized());
+                let a1v0 = replace(&mut a1[0], uninitialized());
+        		$(let $a0v1 = replace(&mut a0[$index], uninitialized());)*
+        		$(let $a1v1 = replace(&mut a1[$index], uninitialized());)*
+                forget(a0);
+        		forget(a1);
+                let init = f(init, a0v0, a1v0);
+                $(let init = f(init, $a0v1, $a1v1);)*
         		(init)
             },
             // TODO: remove unsafe. Blocked on rust-lang/rust#37302
-            map(lhs, f)=>unsafe {
-                let (mut lhs, mut f) = (lhs, f);
-                let lh0 = replace(&mut lhs[0], uninitialized());
-        		$(let $lh = replace(&mut lhs[$index], uninitialized());)*
-        		forget(lhs);
-        		[f(lh0)$(, f($lh))*].into()
+            map(a0, f)=>unsafe {
+                let (mut a0, mut f) = (a0, f);
+                let a0v0 = replace(&mut a0[0], uninitialized());
+        		$(let $a0v1 = replace(&mut a0[$index], uninitialized());)*
+        		forget(a0);
+        		[f(a0v0)$(, f($a0v1))*].into()
             },
             // TODO: remove unsafe. Blocked on rust-lang/rust#37302
-            map_zip(lhs, rhs, f)=>unsafe {
-                let (mut lhs, mut rhs, mut f) = (lhs, rhs, f);
-                let lh0 = replace(&mut lhs[0], uninitialized());
-                let rh0 = replace(&mut rhs[0], uninitialized());
-        		$(let $lh = replace(&mut lhs[$index], uninitialized());)*
-        		$(let $rh = replace(&mut rhs[$index], uninitialized());)*
-                forget(lhs);
-        		forget(rhs);
-        		[f(lh0, rh0)$(, f($lh, $rh))*].into()
+            map_into_2(a0, f)=>unsafe {
+                let (mut a0, mut f) = (a0, f);
+                let a0v0 = replace(&mut a0[0], uninitialized());
+        		$(let $a0v1 = replace(&mut a0[$index], uninitialized());)*
+        		forget(a0);
+                let (a0v0, a1v0) = f(a0v0);
+                $(let ($a0v1, $a1v1) = f($a0v1);)*
+        		([a0v0$(, $a0v1)*].into(), [a1v0$(, $a1v1)*].into())
             },
-            transpose(lhs) => unsafe {
-                let mut lhs = lhs;
-                let lh0 = replace(&mut lhs[0], uninitialized());
-        		$(let $lh = replace(&mut lhs[$index], uninitialized());)*
-                forget(lhs);
+            // TODO: remove unsafe. Blocked on rust-lang/rust#37302
+            map2(a0, a1, f)=>unsafe {
+                let (mut a0, mut a1, mut f) = (a0, a1, f);
+                let a0v0 = replace(&mut a0[0], uninitialized());
+                let a1v0 = replace(&mut a1[0], uninitialized());
+        		$(let $a0v1 = replace(&mut a0[$index], uninitialized());)*
+        		$(let $a1v1 = replace(&mut a1[$index], uninitialized());)*
+                forget(a0);
+        		forget(a1);
+        		[f(a0v0, a1v0)$(, f($a0v1, $a1v1))*].into()
+            },
+            // TODO: remove unsafe. Blocked on rust-lang/rust#37302
+            map3(a0, a1, a2, f)=>unsafe {
+                let (mut a0, mut a1, mut a2, mut f) = (a0, a1, a2, f);
+                let a0v0 = replace(&mut a0[0], uninitialized());
+                let a1v0 = replace(&mut a1[0], uninitialized());
+                let a2v0 = replace(&mut a2[0], uninitialized());
+        		$(let $a0v1 = replace(&mut a0[$index], uninitialized());)*
+        		$(let $a1v1 = replace(&mut a1[$index], uninitialized());)*
+        		$(let $a2v1 = replace(&mut a2[$index], uninitialized());)*
+                forget(a0);
+        		forget(a1);
+        		forget(a2);
+        		[f(a0v0, a1v0, a2v0)$(, f($a0v1, $a1v1, $a2v1))*].into()
+            },
+            transpose(a0) => unsafe {
+                let mut a0 = a0;
+                let a0v0 = replace(&mut a0[0], uninitialized());
+        		$(let $a0v1 = replace(&mut a0[$index], uninitialized());)*
+                forget(a0);
 
-                let lh0 = <U as Dim<S>>::split(lh0);
-        		$(let $lh = U::split($lh);)*
-                let r1 = [lh0.0$(, $lh.0)*].into();
-                let r2 = [lh0.1$(, $lh.1)*].into();
+                let a0v0 = <U as Dim<S>>::split(a0v0);
+        		$(let $a0v1 = U::split($a0v1);)*
+                let r1 = [a0v0.0$(, $a0v1.0)*].into();
+                let r2 = [a0v0.1$(, $a0v1.1)*].into();
                 let r2 = <U::Smaller as Array<S>>::transpose_helper::<Self>(r2);
                 <U as Dim<<Self as Array<S>>::Type>>::chain(r1, r2)
             },
-            transpose_helper(lhs) => U::transpose::<Self, T>(lhs),
-            array_ref(lhs) => {
-                let &[ref lh0$(, ref $lh)*] = &lhs.0;
-                [lh0$(, $lh)*].into()
+            transpose_helper(a0) => U::transpose::<Self, T>(a0),
+            array_ref(a0) => {
+                let &[ref a0v0$(, ref $a0v1)*] = &a0.0;
+                [a0v0$(, $a0v1)*].into()
             },
-            array_mut(lhs) => {
-                let &mut[ref mut lh0$(, ref mut $lh)*] = &mut lhs.0;
-                [lh0$(, $lh)*].into()
+            array_mut(a0) => {
+                let &mut[ref mut a0v0$(, ref mut $a0v1)*] = &mut a0.0;
+                [a0v0$(, $a0v1)*].into()
             },
             $($index),*
         }
 
         impl<T> Dim<T> for $id {
             #[inline(always)]
-            fn split(lhs: Self::Type) -> (T, <Self::Smaller as Array<T>>::Type) {
-                let mut lhs = lhs;
+            fn split(a0: Self::Type) -> (T, <Self::Smaller as Array<T>>::Type) {
+                let mut a0 = a0;
                 // TODO: fix to remove unsafe. Blocked on rust-lang/rust#37302
                 let result = unsafe {(
-                    replace(&mut lhs[0], uninitialized()),
-                    [$(replace(&mut lhs[$index], uninitialized())),*].into()
+                    replace(&mut a0[0], uninitialized()),
+                    [$(replace(&mut a0[$index], uninitialized())),*].into()
                 )};
-                forget(lhs);
+                forget(a0);
                 result
             }
 
             #[inline(always)]
-            fn split_ref(lhs: &Self::Type) -> (&T, &<Self::Smaller as Array<T>>::Type) {
-                let &[ref lh0, ref lhs..] = &lhs.0;
-                (lh0, RefCast::from_ref(lhs))
+            fn split_ref(a0: &Self::Type) -> (&T, &<Self::Smaller as Array<T>>::Type) {
+                let &[ref a0v0, ref a0..] = &a0.0;
+                (a0v0, RefCast::from_ref(a0))
             }
 
             #[inline(always)]
-            fn split_ref_end(lhs: &Self::Type) -> (&<Self::Smaller as Array<T>>::Type, &T) {
-                let &[ref lhs.., ref lh0] = &lhs.0;
-                (RefCast::from_ref(lhs), lh0)
+            fn split_ref_end(a0: &Self::Type) -> (&<Self::Smaller as Array<T>>::Type, &T) {
+                let &[ref a0.., ref a0v0] = &a0.0;
+                (RefCast::from_ref(a0), a0v0)
             }
 
             #[inline(always)]
-            fn split_mut(lhs: &mut Self::Type) -> (&mut T, &mut <Self::Smaller as Array<T>>::Type) {
-                let &mut[ref mut lh0, ref mut lhs..] = &mut lhs.0;
-                (lh0, RefCast::from_mut(lhs))
+            fn split_mut(a0: &mut Self::Type) -> (&mut T, &mut <Self::Smaller as Array<T>>::Type) {
+                let &mut[ref mut a0v0, ref mut a0..] = &mut a0.0;
+                (a0v0, RefCast::from_mut(a0))
             }
 
             #[inline(always)]
-            fn split_mut_end(lhs: &mut Self::Type) -> (&mut <Self::Smaller as Array<T>>::Type, &mut T) {
-                let &mut[ref mut lhs.., ref mut lh0] = &mut lhs.0;
-                (RefCast::from_mut(lhs), lh0)
+            fn split_mut_end(a0: &mut Self::Type) -> (&mut <Self::Smaller as Array<T>>::Type, &mut T) {
+                let &mut[ref mut a0.., ref mut a0v0] = &mut a0.0;
+                (RefCast::from_mut(a0), a0v0)
             }
 
             #[inline(always)]
-            fn chain(lh0: T, lhs: <Self::Smaller as Array<T>>::Type) -> Self::Type {
+            fn chain(a0v0: T, a0: <Self::Smaller as Array<T>>::Type) -> Self::Type {
                 // TODO: remove unsafe. Blocked on rust-lang/rust#37302
-                let mut lhs = lhs; { let _unused = &mut lhs; }
+                let mut a0 = a0; { let _unused = &mut a0; }
                 #[allow(eq_op)]
-                $(let $lh = replace(&mut lhs[$index-1], unsafe { uninitialized() });)*
-                forget(lhs);
-                [lh0$(, $lh)*].into()
+                $(let $a0v1 = replace(&mut a0[$index-1], unsafe { uninitialized() });)*
+                forget(a0);
+                [a0v0$(, $a0v1)*].into()
             }
         }
         impl ExtractItem<Zero> for $id {
             #[inline(always)]
-            fn extract<T>(lhs: <Self as Array<T>>::Type) -> (T, <<$id as HasSmaller>::Smaller as Array<T>>::Type) {
-                Self::split(lhs)
+            fn extract<T>(a0: <Self as Array<T>>::Type) -> (T, <<$id as HasSmaller>::Smaller as Array<T>>::Type) {
+                Self::split(a0)
             }
         }
         impl<T> DimRef<T> for $id {}
@@ -617,9 +663,9 @@ macro_rules! impl_is_smaller_larger {
 impl IsSmallerThan<$larger> for $smaller {
     /// Index an array of size `C` safely.
     #[inline(always)]
-    fn index_array<T>(lhs: &<$larger as Array<T>>::Type) -> &T {
+    fn index_array<T>(a0: &<$larger as Array<T>>::Type) -> &T {
         fn _dummy(v: <$larger as Array<()>>::Type) { v[$smaller::VALUE] }
-        &lhs.0[$smaller::VALUE]
+        &a0.0[$smaller::VALUE]
     }
 }
 impl IsLargerThan<$smaller> for $larger {}
@@ -641,111 +687,111 @@ impl_is_smaller_larger!{Zero, One, Two, Three, Four}
 
 impl_array!{Zero,  CustomArrayZero}
 impl_array!{One,   CustomArrayOne,   1}
-impl_array!{Two,   CustomArrayTwo,   2, 1;lh1;rh1}
-impl_array!{Three, CustomArrayThree, 3, 1;lh1;rh1, 2;lh2;rh2}
-impl_array!{Four,  CustomArrayFour,  4, 1;lh1;rh1, 2;lh2;rh2, 3;lh3;rh3}
+impl_array!{Two,   CustomArrayTwo,   2, 1;a0v1;a1v1;a2v1}
+impl_array!{Three, CustomArrayThree, 3, 1;a0v1;a1v1;a2v1, 2;a0v2;a1v2;a2v2}
+impl_array!{Four,  CustomArrayFour,  4, 1;a0v1;a1v1;a2v1, 2;a0v2;a1v2;a2v2, 3;a0v3;a1v3;a2v3}
 
 
 impl ExtractItem<One> for Two {
     #[inline(always)]
-    fn extract<T>(lhs: <Self as Array<T>>::Type) -> (T, <One as Array<T>>::Type) {
-        let mut lhs = lhs;
+    fn extract<T>(a0: <Self as Array<T>>::Type) -> (T, <One as Array<T>>::Type) {
+        let mut a0 = a0;
         // TODO: fix to remove unsafe. Blocked on rust-lang/rust#37302
         let result = unsafe {(
-            replace(&mut lhs[1], uninitialized()),
+            replace(&mut a0[1], uninitialized()),
             [
-                replace(&mut lhs[0], uninitialized()),
+                replace(&mut a0[0], uninitialized()),
             ].into()
         )};
-        forget(lhs);
+        forget(a0);
         result
     }
 }
 
 impl ExtractItem<One> for Three {
     #[inline(always)]
-    fn extract<T>(lhs: <Self as Array<T>>::Type) -> (T, <Two as Array<T>>::Type) {
-        let mut lhs = lhs;
+    fn extract<T>(a0: <Self as Array<T>>::Type) -> (T, <Two as Array<T>>::Type) {
+        let mut a0 = a0;
         // TODO: fix to remove unsafe. Blocked on rust-lang/rust#37302
         let result = unsafe {(
-            replace(&mut lhs[1], uninitialized()),
+            replace(&mut a0[1], uninitialized()),
             [
-                replace(&mut lhs[0], uninitialized()),
-                replace(&mut lhs[2], uninitialized()),
+                replace(&mut a0[0], uninitialized()),
+                replace(&mut a0[2], uninitialized()),
             ].into()
         )};
-        forget(lhs);
+        forget(a0);
         result
     }
 }
 
 impl ExtractItem<Two> for Three {
     #[inline(always)]
-    fn extract<T>(lhs: <Self as Array<T>>::Type) -> (T, <Two as Array<T>>::Type) {
-        let mut lhs = lhs;
+    fn extract<T>(a0: <Self as Array<T>>::Type) -> (T, <Two as Array<T>>::Type) {
+        let mut a0 = a0;
         // TODO: fix to remove unsafe. Blocked on rust-lang/rust#37302
         let result = unsafe {(
-            replace(&mut lhs[2], uninitialized()),
+            replace(&mut a0[2], uninitialized()),
             [
-                replace(&mut lhs[0], uninitialized()),
-                replace(&mut lhs[1], uninitialized()),
+                replace(&mut a0[0], uninitialized()),
+                replace(&mut a0[1], uninitialized()),
             ].into()
         )};
-        forget(lhs);
+        forget(a0);
         result
     }
 }
 
 impl ExtractItem<One> for Four {
     #[inline(always)]
-    fn extract<T>(lhs: <Self as Array<T>>::Type) -> (T, <Three as Array<T>>::Type) {
-        let mut lhs = lhs;
+    fn extract<T>(a0: <Self as Array<T>>::Type) -> (T, <Three as Array<T>>::Type) {
+        let mut a0 = a0;
         // TODO: fix to remove unsafe. Blocked on rust-lang/rust#37302
         let result = unsafe {(
-            replace(&mut lhs[1], uninitialized()),
+            replace(&mut a0[1], uninitialized()),
             [
-                replace(&mut lhs[0], uninitialized()),
-                replace(&mut lhs[2], uninitialized()),
-                replace(&mut lhs[3], uninitialized()),
+                replace(&mut a0[0], uninitialized()),
+                replace(&mut a0[2], uninitialized()),
+                replace(&mut a0[3], uninitialized()),
             ].into()
         )};
-        forget(lhs);
+        forget(a0);
         result
     }
 }
 
 impl ExtractItem<Two> for Four {
     #[inline(always)]
-    fn extract<T>(lhs: <Self as Array<T>>::Type) -> (T, <Three as Array<T>>::Type) {
-        let mut lhs = lhs;
+    fn extract<T>(a0: <Self as Array<T>>::Type) -> (T, <Three as Array<T>>::Type) {
+        let mut a0 = a0;
         // TODO: fix to remove unsafe. Blocked on rust-lang/rust#37302
         let result = unsafe {(
-            replace(&mut lhs[2], uninitialized()),
+            replace(&mut a0[2], uninitialized()),
             [
-                replace(&mut lhs[0], uninitialized()),
-                replace(&mut lhs[1], uninitialized()),
-                replace(&mut lhs[3], uninitialized()),
+                replace(&mut a0[0], uninitialized()),
+                replace(&mut a0[1], uninitialized()),
+                replace(&mut a0[3], uninitialized()),
             ].into()
         )};
-        forget(lhs);
+        forget(a0);
         result
     }
 }
 
 impl ExtractItem<Three> for Four {
     #[inline(always)]
-    fn extract<T>(lhs: <Self as Array<T>>::Type) -> (T, <Three as Array<T>>::Type) {
-        let mut lhs = lhs;
+    fn extract<T>(a0: <Self as Array<T>>::Type) -> (T, <Three as Array<T>>::Type) {
+        let mut a0 = a0;
         // TODO: fix to remove unsafe. Blocked on rust-lang/rust#37302
         let result = unsafe {(
-            replace(&mut lhs[3], uninitialized()),
+            replace(&mut a0[3], uninitialized()),
             [
-                replace(&mut lhs[0], uninitialized()),
-                replace(&mut lhs[1], uninitialized()),
-                replace(&mut lhs[2], uninitialized()),
+                replace(&mut a0[0], uninitialized()),
+                replace(&mut a0[1], uninitialized()),
+                replace(&mut a0[2], uninitialized()),
             ].into()
         )};
-        forget(lhs);
+        forget(a0);
         result
     }
 }
@@ -755,13 +801,13 @@ impl ExtractArray<Zero, One> for Two {
     type Extracted = Two;
 
     #[inline(always)]
-    fn extract_array_ref<T>(lhs: &<Self as Array<T>>::Type) -> &<Self::Extracted as Array<T>>::Type {
-        lhs
+    fn extract_array_ref<T>(a0: &<Self as Array<T>>::Type) -> &<Self::Extracted as Array<T>>::Type {
+        a0
     }
 
     #[inline(always)]
-    fn extract_array_mut<T>(lhs: &mut <Self as Array<T>>::Type) -> &mut <Self::Extracted as Array<T>>::Type {
-        lhs
+    fn extract_array_mut<T>(a0: &mut <Self as Array<T>>::Type) -> &mut <Self::Extracted as Array<T>>::Type {
+        a0
     }
 }
 
@@ -770,15 +816,15 @@ impl ExtractArray<Zero, One> for Three {
     type Extracted = Two;
 
     #[inline(always)]
-    fn extract_array_ref<T>(lhs: &<Self as Array<T>>::Type) -> &<Self::Extracted as Array<T>>::Type {
-        let &[ref lhs.., _] = &lhs.0;
-        (RefCast::from_ref(lhs))
+    fn extract_array_ref<T>(a0: &<Self as Array<T>>::Type) -> &<Self::Extracted as Array<T>>::Type {
+        let &[ref a0.., _] = &a0.0;
+        (RefCast::from_ref(a0))
     }
 
     #[inline(always)]
-    fn extract_array_mut<T>(lhs: &mut <Self as Array<T>>::Type) -> &mut <Self::Extracted as Array<T>>::Type {
-        let &mut [ref mut lhs.., _] = &mut lhs.0;
-        (RefCast::from_mut(lhs))
+    fn extract_array_mut<T>(a0: &mut <Self as Array<T>>::Type) -> &mut <Self::Extracted as Array<T>>::Type {
+        let &mut [ref mut a0.., _] = &mut a0.0;
+        (RefCast::from_mut(a0))
     }
 }
 
@@ -786,13 +832,13 @@ impl ExtractArray<Zero, Two> for Three {
     type Extracted = Three;
 
     #[inline(always)]
-    fn extract_array_ref<T>(lhs: &<Self as Array<T>>::Type) -> &<Self::Extracted as Array<T>>::Type {
-        lhs
+    fn extract_array_ref<T>(a0: &<Self as Array<T>>::Type) -> &<Self::Extracted as Array<T>>::Type {
+        a0
     }
 
     #[inline(always)]
-    fn extract_array_mut<T>(lhs: &mut <Self as Array<T>>::Type) -> &mut <Self::Extracted as Array<T>>::Type {
-        lhs
+    fn extract_array_mut<T>(a0: &mut <Self as Array<T>>::Type) -> &mut <Self::Extracted as Array<T>>::Type {
+        a0
     }
 }
 
@@ -800,15 +846,15 @@ impl ExtractArray<One, Two> for Three {
     type Extracted = Two;
 
     #[inline(always)]
-    fn extract_array_ref<T>(lhs: &<Self as Array<T>>::Type) -> &<Self::Extracted as Array<T>>::Type {
-        let &[_, ref lhs..] = &lhs.0;
-        (RefCast::from_ref(lhs))
+    fn extract_array_ref<T>(a0: &<Self as Array<T>>::Type) -> &<Self::Extracted as Array<T>>::Type {
+        let &[_, ref a0..] = &a0.0;
+        (RefCast::from_ref(a0))
     }
 
     #[inline(always)]
-    fn extract_array_mut<T>(lhs: &mut <Self as Array<T>>::Type) -> &mut <Self::Extracted as Array<T>>::Type {
-        let &mut [_, ref mut lhs..] = &mut lhs.0;
-        (RefCast::from_mut(lhs))
+    fn extract_array_mut<T>(a0: &mut <Self as Array<T>>::Type) -> &mut <Self::Extracted as Array<T>>::Type {
+        let &mut [_, ref mut a0..] = &mut a0.0;
+        (RefCast::from_mut(a0))
     }
 }
 
@@ -817,15 +863,15 @@ impl ExtractArray<Zero, One> for Four {
     type Extracted = Two;
 
     #[inline(always)]
-    fn extract_array_ref<T>(lhs: &<Self as Array<T>>::Type) -> &<Self::Extracted as Array<T>>::Type {
-        let &[ref lhs.., _, _] = &lhs.0;
-        (RefCast::from_ref(lhs))
+    fn extract_array_ref<T>(a0: &<Self as Array<T>>::Type) -> &<Self::Extracted as Array<T>>::Type {
+        let &[ref a0.., _, _] = &a0.0;
+        (RefCast::from_ref(a0))
     }
 
     #[inline(always)]
-    fn extract_array_mut<T>(lhs: &mut <Self as Array<T>>::Type) -> &mut <Self::Extracted as Array<T>>::Type {
-        let &mut [ref mut lhs.., _, _] = &mut lhs.0;
-        (RefCast::from_mut(lhs))
+    fn extract_array_mut<T>(a0: &mut <Self as Array<T>>::Type) -> &mut <Self::Extracted as Array<T>>::Type {
+        let &mut [ref mut a0.., _, _] = &mut a0.0;
+        (RefCast::from_mut(a0))
     }
 }
 
@@ -833,15 +879,15 @@ impl ExtractArray<Zero, Two> for Four {
     type Extracted = Three;
 
     #[inline(always)]
-    fn extract_array_ref<T>(lhs: &<Self as Array<T>>::Type) -> &<Self::Extracted as Array<T>>::Type {
-        let &[ref lhs.., _] = &lhs.0;
-        (RefCast::from_ref(lhs))
+    fn extract_array_ref<T>(a0: &<Self as Array<T>>::Type) -> &<Self::Extracted as Array<T>>::Type {
+        let &[ref a0.., _] = &a0.0;
+        (RefCast::from_ref(a0))
     }
 
     #[inline(always)]
-    fn extract_array_mut<T>(lhs: &mut <Self as Array<T>>::Type) -> &mut <Self::Extracted as Array<T>>::Type {
-        let &mut [ref mut lhs.., _] = &mut lhs.0;
-        (RefCast::from_mut(lhs))
+    fn extract_array_mut<T>(a0: &mut <Self as Array<T>>::Type) -> &mut <Self::Extracted as Array<T>>::Type {
+        let &mut [ref mut a0.., _] = &mut a0.0;
+        (RefCast::from_mut(a0))
     }
 }
 
@@ -849,13 +895,13 @@ impl ExtractArray<Zero, Three> for Four {
     type Extracted = Four;
 
     #[inline(always)]
-    fn extract_array_ref<T>(lhs: &<Self as Array<T>>::Type) -> &<Self::Extracted as Array<T>>::Type {
-        lhs
+    fn extract_array_ref<T>(a0: &<Self as Array<T>>::Type) -> &<Self::Extracted as Array<T>>::Type {
+        a0
     }
 
     #[inline(always)]
-    fn extract_array_mut<T>(lhs: &mut <Self as Array<T>>::Type) -> &mut <Self::Extracted as Array<T>>::Type {
-        lhs
+    fn extract_array_mut<T>(a0: &mut <Self as Array<T>>::Type) -> &mut <Self::Extracted as Array<T>>::Type {
+        a0
     }
 }
 
@@ -863,15 +909,15 @@ impl ExtractArray<One, Two> for Four {
     type Extracted = Two;
 
     #[inline(always)]
-    fn extract_array_ref<T>(lhs: &<Self as Array<T>>::Type) -> &<Self::Extracted as Array<T>>::Type {
-        let &[_, ref lhs.., _] = &lhs.0;
-        (RefCast::from_ref(lhs))
+    fn extract_array_ref<T>(a0: &<Self as Array<T>>::Type) -> &<Self::Extracted as Array<T>>::Type {
+        let &[_, ref a0.., _] = &a0.0;
+        (RefCast::from_ref(a0))
     }
 
     #[inline(always)]
-    fn extract_array_mut<T>(lhs: &mut <Self as Array<T>>::Type) -> &mut <Self::Extracted as Array<T>>::Type {
-        let &mut [_, ref mut lhs.., _] = &mut lhs.0;
-        (RefCast::from_mut(lhs))
+    fn extract_array_mut<T>(a0: &mut <Self as Array<T>>::Type) -> &mut <Self::Extracted as Array<T>>::Type {
+        let &mut [_, ref mut a0.., _] = &mut a0.0;
+        (RefCast::from_mut(a0))
     }
 }
 
@@ -879,15 +925,15 @@ impl ExtractArray<One, Three> for Four {
     type Extracted = Three;
 
     #[inline(always)]
-    fn extract_array_ref<T>(lhs: &<Self as Array<T>>::Type) -> &<Self::Extracted as Array<T>>::Type {
-        let &[_, ref lhs..] = &lhs.0;
-        (RefCast::from_ref(lhs))
+    fn extract_array_ref<T>(a0: &<Self as Array<T>>::Type) -> &<Self::Extracted as Array<T>>::Type {
+        let &[_, ref a0..] = &a0.0;
+        (RefCast::from_ref(a0))
     }
 
     #[inline(always)]
-    fn extract_array_mut<T>(lhs: &mut <Self as Array<T>>::Type) -> &mut <Self::Extracted as Array<T>>::Type {
-        let &mut [_, ref mut lhs..] = &mut lhs.0;
-        (RefCast::from_mut(lhs))
+    fn extract_array_mut<T>(a0: &mut <Self as Array<T>>::Type) -> &mut <Self::Extracted as Array<T>>::Type {
+        let &mut [_, ref mut a0..] = &mut a0.0;
+        (RefCast::from_mut(a0))
     }
 }
 
@@ -895,15 +941,15 @@ impl ExtractArray<Two, Three> for Four {
     type Extracted = Two;
 
     #[inline(always)]
-    fn extract_array_ref<T>(lhs: &<Self as Array<T>>::Type) -> &<Self::Extracted as Array<T>>::Type {
-        let &[_, _, ref lhs..] = &lhs.0;
-        (RefCast::from_ref(lhs))
+    fn extract_array_ref<T>(a0: &<Self as Array<T>>::Type) -> &<Self::Extracted as Array<T>>::Type {
+        let &[_, _, ref a0..] = &a0.0;
+        (RefCast::from_ref(a0))
     }
 
     #[inline(always)]
-    fn extract_array_mut<T>(lhs: &mut <Self as Array<T>>::Type) -> &mut <Self::Extracted as Array<T>>::Type {
-        let &mut [_, _, ref mut lhs..] = &mut lhs.0;
-        (RefCast::from_mut(lhs))
+    fn extract_array_mut<T>(a0: &mut <Self as Array<T>>::Type) -> &mut <Self::Extracted as Array<T>>::Type {
+        let &mut [_, _, ref mut a0..] = &mut a0.0;
+        (RefCast::from_mut(a0))
     }
 }
 

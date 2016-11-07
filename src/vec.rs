@@ -45,9 +45,9 @@ use scalar_array::{
     ConcreteScalarArray,HasConcreteScalarArray,ConcreteVecArray,HasConcreteVecArray,
 };
 use scalar_array::{
-    apply_zip_mut_val,
-    fold,fold_ref,fold_zip,fold_zip_ref,
-    map,map_zip,
+    apply2_mut_val,
+    fold,fold_ref,fold2,fold2_ref,
+    map,map2,
     mul_vector_transpose
 };
 use scalar_array::vec_array;
@@ -358,7 +358,7 @@ S::Scalar: Sub<T::Scalar>,
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
 <S::Row as HasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar>,
 {
-    fold_zip(s, t,
+    fold2(s, t,
         |s, t| {
             let v = s - t;
             (v.clone() * v)
@@ -410,7 +410,7 @@ T::Scalar: Mul + Clone,
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
 <S::Row as HasSmaller>::Smaller: Array<S::Scalar> + Array<T::Scalar>,
 {
-    let (s_dot_t, s_length2, t_length2) = fold_zip(s, t,
+    let (s_dot_t, s_length2, t_length2) = fold2(s, t,
         |s, t| (s.clone()*t.clone(), s.clone()*s, t.clone()*t),
         |(st, ss, tt), s, t|(st + s.clone()*t.clone(), ss + s.clone()*s, tt + t.clone()*t),
     );
@@ -453,7 +453,7 @@ N::Scalar: Clone,
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
 for<'a> <I::Row as HasSmaller>::Smaller: Array<I::Scalar> + Array<&'a I::Scalar> + Array<N::Scalar> + Array<&'a N::Scalar>
 {
-    let i_dot_n = fold_zip_ref(&i, &n, |i, n| i.clone()*n.clone(), |init, i, n| init + (i.clone() * n.clone()));
+    let i_dot_n = fold2_ref(&i, &n, |i, n| i.clone()*n.clone(), |init, i, n| init + (i.clone() * n.clone()));
     i - n * v(i_dot_n.clone() + i_dot_n)
 }
 
@@ -491,7 +491,7 @@ S: $trait_name<Rhs::Scalar>,
 D::Smaller: Array<S> + Array<Rhs::Scalar> + Array<S::Output>,
 {
     type Output = Vec<D, S::Output>;
-    fn $method_name(self, rhs: Rhs) -> Self::Output { map_zip(self, rhs, $trait_name::$method_name) }
+    fn $method_name(self, rhs: Rhs) -> Self::Output { map2(self, rhs, $trait_name::$method_name) }
 }
     };
 
@@ -506,7 +506,7 @@ D::Smaller: Array<S> + Array<Rhs> + Array<S::Output>,
 {
     type Output = Vec<D, S::Output>;
     fn $method_name(self, rhs: Value<Rhs>) -> Self::Output {
-        map_zip(self, Vec::from_vec_val(D::from_value(rhs.0)), $trait_name::$method_name)
+        map2(self, Vec::from_vec_val(D::from_value(rhs.0)), $trait_name::$method_name)
     }
 }
 impl<S, D: Dim<S>, Lhs> $trait_name<Vec<D, S>> for Value<Lhs>
@@ -519,7 +519,7 @@ D::Smaller: Array<S> + Array<Lhs> + Array<Lhs::Output>,
 {
     type Output = Vec<D, Lhs::Output>;
     fn $method_name(self, rhs: Vec<D, S>) -> Self::Output {
-        map_zip(Vec::<_, Lhs>::from_vec_val(D::from_value(self.0)), rhs, $trait_name::$method_name)
+        map2(Vec::<_, Lhs>::from_vec_val(D::from_value(self.0)), rhs, $trait_name::$method_name)
     }
 }
     };
@@ -539,7 +539,7 @@ S: $trait_name<Rhs::Scalar>,
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
 for<'a> D::Smaller: Array<S> + Array<Rhs::Scalar> + Array<&'a S> + Array<&'a mut S>,
 {
-    fn $method_name(&mut self, rhs: Rhs) { apply_zip_mut_val(self, rhs, $trait_name::$method_name) }
+    fn $method_name(&mut self, rhs: Rhs) { apply2_mut_val(self, rhs, $trait_name::$method_name) }
 }
     };
 
@@ -553,7 +553,7 @@ S: $trait_name<Rhs>,
 for<'a> D::Smaller: Array<S> + Array<Rhs> + Array<&'a S> + Array<&'a mut S>,
 {
     fn $method_name(&mut self, rhs: Value<Rhs>) {
-        apply_zip_mut_val(self, Vec::from_vec_val(D::from_value(rhs.0)), $trait_name::$method_name)
+        apply2_mut_val(self, Vec::from_vec_val(D::from_value(rhs.0)), $trait_name::$method_name)
     }
 }
     };
