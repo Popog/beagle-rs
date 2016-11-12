@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `mat` mod in crate `beagle`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, mat">
+
+    <title>beagle::mat - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'><a href='../index.html'>beagle</a></p><script>window.sidebarCurrent = {name: 'mat', ty: 'mod', relpath: '../'};</script><script defer src="../sidebar-items.js"></script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content mod">
+<h1 class='fqn'><span class='in-band'>Module <a href='../index.html'>beagle</a>::<wbr><a class='mod' href=''>mat</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a id='src-514' class='srclink' href='../../src/beagle/src/mat.rs.html#1-667' title='goto source code'>[src]</a></span></h1>
+<div class='docblock'><p>An row-major array of vectors, written <code>Mat&lt;R, C, T&gt;</code> but pronounced &#39;matrix&#39;.</p>
+
+<p>Matrices support binary operations between two Matrices or between one Matrix and one Scalar.
+All Arithmetic operators and Bitwise operators are supported, where the two Scalar types
+involved support the operation. Most operations operate on each component separately.</p>
+
+<p>The exceptions is matrix multiplied by matrix, which requires performs a linear algebraic
+multiplication and requires the underlying Scalar types to support Add and Mul.</p>
+
+<p>Matrices can be multiplied by a vector, vector multiplied by matrix, both of which also
+require the underlying Scalar types to support Add and Mul.</p>
+
+<p>Matrices also support Negation and Logical Negation where the underlying Scalar Type supports
+it.</p>
+
+<p><code>Mat1x1</code>, <code>Mat1x2</code>, etc. aliases are provided to simplify typing, as well as <code>Mat1</code>, <code>Mat2</code>,
+etc. for square matrices.</p>
+
+<h1 id='examples' class='section-header'><a href='#examples'>Examples</a></h1>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>beagle</span>::<span class='ident'>mat</span>::{<span class='ident'>Mat3</span>};
+<span class='kw'>use</span> <span class='ident'>beagle</span>::<span class='ident'>vec</span>::{<span class='ident'>Vec3</span>};
+
+<span class='kw'>let</span> <span class='ident'>m</span> <span class='op'>=</span> <span class='ident'>Mat3</span>::<span class='ident'>new</span>([
+    [ <span class='number'>2f32</span>,  <span class='number'>3f32</span>,  <span class='number'>5f32</span>],
+    [ <span class='number'>7f32</span>, <span class='number'>11f32</span>, <span class='number'>13f32</span>],
+    [<span class='number'>17f32</span>, <span class='number'>19f32</span>, <span class='number'>23f32</span>]]);
+<span class='kw'>let</span> <span class='ident'>v</span> <span class='op'>=</span> <span class='ident'>Vec3</span>::<span class='ident'>new</span>([<span class='number'>29f32</span>, <span class='number'>31f32</span>, <span class='number'>37f32</span>]);
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>m</span><span class='op'>*</span><span class='ident'>v</span>, <span class='ident'>Vec3</span>::<span class='ident'>new</span>([<span class='number'>336f32</span>, <span class='number'>1025f32</span>, <span class='number'>1933f32</span>]));</pre>
+</div><h2 id='structs' class='section-header'><a href="#structs">Structs</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class='struct' href='struct.Mat.html'
+                                  title='beagle::mat::Mat'>Mat</a></td>
+                           <td class='docblock-short'>
+                                <p>An row-major array of vectors, written <code>Mat&lt;R, C, T&gt;</code> but pronounced &#39;matrix&#39;.</p>
+                           </td>
+                       </tr></table><h2 id='types' class='section-header'><a href="#types">Type Definitions</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class='type' href='type.Mat1.html'
+                                  title='beagle::mat::Mat1'>Mat1</a></td>
+                           <td class='docblock-short'>
+                                <p>An alias for Mat&lt;One, One, T&gt;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='type' href='type.Mat1x1.html'
+                                  title='beagle::mat::Mat1x1'>Mat1x1</a></td>
+                           <td class='docblock-short'>
+                                <p>An alias for Mat&lt;One, One, T&gt;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='type' href='type.Mat1x2.html'
+                                  title='beagle::mat::Mat1x2'>Mat1x2</a></td>
+                           <td class='docblock-short'>
+                                <p>An alias for Mat&lt;One, Two, T&gt;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='type' href='type.Mat1x3.html'
+                                  title='beagle::mat::Mat1x3'>Mat1x3</a></td>
+                           <td class='docblock-short'>
+                                <p>An alias for Mat&lt;One, Three, T&gt;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='type' href='type.Mat1x4.html'
+                                  title='beagle::mat::Mat1x4'>Mat1x4</a></td>
+                           <td class='docblock-short'>
+                                <p>An alias for Mat&lt;One, Four, T&gt;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='type' href='type.Mat2.html'
+                                  title='beagle::mat::Mat2'>Mat2</a></td>
+                           <td class='docblock-short'>
+                                <p>An alias for Mat&lt;Two, Two, T&gt;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='type' href='type.Mat2x1.html'
+                                  title='beagle::mat::Mat2x1'>Mat2x1</a></td>
+                           <td class='docblock-short'>
+                                <p>An alias for Mat&lt;Two, One, T&gt;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='type' href='type.Mat2x2.html'
+                                  title='beagle::mat::Mat2x2'>Mat2x2</a></td>
+                           <td class='docblock-short'>
+                                <p>An alias for Mat&lt;Two, Two, T&gt;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='type' href='type.Mat2x3.html'
+                                  title='beagle::mat::Mat2x3'>Mat2x3</a></td>
+                           <td class='docblock-short'>
+                                <p>An alias for Mat&lt;Two, Three, T&gt;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='type' href='type.Mat2x4.html'
+                                  title='beagle::mat::Mat2x4'>Mat2x4</a></td>
+                           <td class='docblock-short'>
+                                <p>An alias for Mat&lt;Two, Four, T&gt;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='type' href='type.Mat3.html'
+                                  title='beagle::mat::Mat3'>Mat3</a></td>
+                           <td class='docblock-short'>
+                                <p>An alias for Mat&lt;Three, Three, T&gt;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='type' href='type.Mat3x1.html'
+                                  title='beagle::mat::Mat3x1'>Mat3x1</a></td>
+                           <td class='docblock-short'>
+                                <p>An alias for Mat&lt;Three, One, T&gt;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='type' href='type.Mat3x2.html'
+                                  title='beagle::mat::Mat3x2'>Mat3x2</a></td>
+                           <td class='docblock-short'>
+                                <p>An alias for Mat&lt;Three, Two, T&gt;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='type' href='type.Mat3x3.html'
+                                  title='beagle::mat::Mat3x3'>Mat3x3</a></td>
+                           <td class='docblock-short'>
+                                <p>An alias for Mat&lt;Three, Three, T&gt;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='type' href='type.Mat3x4.html'
+                                  title='beagle::mat::Mat3x4'>Mat3x4</a></td>
+                           <td class='docblock-short'>
+                                <p>An alias for Mat&lt;Three, Four, T&gt;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='type' href='type.Mat4.html'
+                                  title='beagle::mat::Mat4'>Mat4</a></td>
+                           <td class='docblock-short'>
+                                <p>An alias for Mat&lt;Four, Four, T&gt;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='type' href='type.Mat4x1.html'
+                                  title='beagle::mat::Mat4x1'>Mat4x1</a></td>
+                           <td class='docblock-short'>
+                                <p>An alias for Mat&lt;Four, One, T&gt;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='type' href='type.Mat4x2.html'
+                                  title='beagle::mat::Mat4x2'>Mat4x2</a></td>
+                           <td class='docblock-short'>
+                                <p>An alias for Mat&lt;Four, Two, T&gt;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='type' href='type.Mat4x3.html'
+                                  title='beagle::mat::Mat4x3'>Mat4x3</a></td>
+                           <td class='docblock-short'>
+                                <p>An alias for Mat&lt;Four, Three, T&gt;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='type' href='type.Mat4x4.html'
+                                  title='beagle::mat::Mat4x4'>Mat4x4</a></td>
+                           <td class='docblock-short'>
+                                <p>An alias for Mat&lt;Four, Four, T&gt;</p>
+                           </td>
+                       </tr></table></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt>+</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../../";
+        window.currentCrate = "beagle";
+    </script>
+    <script src="../../jquery.js"></script>
+    <script src="../../main.js"></script>
+    <script defer src="../../search-index.js"></script>
+</body>
+</html>

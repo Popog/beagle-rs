@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `HasConcreteScalarArray` trait in crate `beagle`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, HasConcreteScalarArray">
+
+    <title>beagle::scalar_array::HasConcreteScalarArray - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'><a href='../index.html'>beagle</a>::<wbr><a href='index.html'>scalar_array</a></p><script>window.sidebarCurrent = {name: 'HasConcreteScalarArray', ty: 'trait', relpath: ''};</script><script defer src="sidebar-items.js"></script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content trait">
+<h1 class='fqn'><span class='in-band'>Trait <a href='../index.html'>beagle</a>::<wbr><a href='index.html'>scalar_array</a>::<wbr><a class='trait' href=''>HasConcreteScalarArray</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a id='src-667' class='srclink' href='../../src/beagle/src/scalar_array.rs.html#38-49' title='goto source code'>[src]</a></span></h1>
+<pre class='rust trait'>pub trait HasConcreteScalarArray&lt;S, R&nbsp;=&nbsp;Self::Row, D&nbsp;=&nbsp;Self::Dim&gt;: <a class='trait' href='../../beagle/scalar_array/trait.ScalarArray.html' title='beagle::scalar_array::ScalarArray'>ScalarArray</a> <span class='where'>where R: <a class='trait' href='../../beagle/consts/trait.Dim.html' title='beagle::consts::Dim'>Dim</a>&lt;S&gt;, D: <a class='trait' href='../../beagle/consts/trait.TwoDim.html' title='beagle::consts::TwoDim'>TwoDim</a>&lt;S, R&gt;, Self::Row::Smaller: <a class='trait' href='../../beagle/consts/trait.Array.html' title='beagle::consts::Array'>Array</a>&lt;Self::Scalar&gt;, Self::Dim::Smaller: <a class='trait' href='../../beagle/consts/trait.Array.html' title='beagle::consts::Array'>Array</a>&lt;Self::Row::Type&gt;, R::Smaller: <a class='trait' href='../../beagle/consts/trait.Array.html' title='beagle::consts::Array'>Array</a>&lt;S&gt;, D::Smaller: <a class='trait' href='../../beagle/consts/trait.Array.html' title='beagle::consts::Array'>Array</a>&lt;R::Type&gt;</span> {
+    type <a href='#associatedtype.Concrete' class='type'>Concrete</a>: <a class='trait' href='../../beagle/scalar_array/trait.ConcreteScalarArray.html' title='beagle::scalar_array::ConcreteScalarArray'>ConcreteScalarArray</a>&lt;Scalar=S, Row=R, Dim=D&gt;;
+}</pre><div class='docblock'><p>Matrix/Vector types that have an associated constructable type</p>
+</div>
+            <h2 id='associated-types'>Associated Types</h2>
+            <div class='methods'>
+        <h3 id='associatedtype.Concrete' class='method stab '><span id='Concrete.t' class='invisible'><code>type <a href='#associatedtype.Concrete' class='type'>Concrete</a>: <a class='trait' href='../../beagle/scalar_array/trait.ConcreteScalarArray.html' title='beagle::scalar_array::ConcreteScalarArray'>ConcreteScalarArray</a>&lt;Scalar=S, Row=R, Dim=D&gt;</code></span></h3><div class='docblock'><p>The type of a concrete ScalarArray of the specified type</p>
+</div></div>
+        <h2 id='implementors'>Implementors</h2>
+        <ul class='item-list' id='implementors-list'>
+    <li><code>impl&lt;'a, S, T, D, D2, I0, I1&gt; HasConcreteScalarArray&lt;T, D2&gt; for &amp;'a <a class='struct' href='../../beagle/index/struct.Vec2Ref.html' title='beagle::index::Vec2Ref'>Vec2Ref</a>&lt;D, S, I0, I1&gt; <span class='where'>where D: <a class='trait' href='../../beagle/consts/trait.Dim.html' title='beagle::consts::Dim'>Dim</a>&lt;S&gt; + <a class='trait' href='../../beagle/consts/trait.IsLargerThan.html' title='beagle::consts::IsLargerThan'>IsLargerThan</a>&lt;I0&gt; + <a class='trait' href='../../beagle/consts/trait.IsLargerThan.html' title='beagle::consts::IsLargerThan'>IsLargerThan</a>&lt;I1&gt;, D2: <a class='trait' href='../../beagle/consts/trait.Dim.html' title='beagle::consts::Dim'>Dim</a>&lt;T&gt;, I0: <a class='trait' href='../../beagle/consts/trait.IsSmallerThan.html' title='beagle::consts::IsSmallerThan'>IsSmallerThan</a>&lt;D&gt;, I1: <a class='trait' href='../../beagle/consts/trait.IsSmallerThan.html' title='beagle::consts::IsSmallerThan'>IsSmallerThan</a>&lt;D&gt;, D::Smaller: <a class='trait' href='../../beagle/consts/trait.Array.html' title='beagle::consts::Array'>Array</a>&lt;S&gt;, D2::Smaller: <a class='trait' href='../../beagle/consts/trait.Array.html' title='beagle::consts::Array'>Array</a>&lt;T&gt;</span></code></li>
+<li><code>impl&lt;'a, S, T, D, D2, I0, I1&gt; HasConcreteScalarArray&lt;T, D2&gt; for &amp;'a mut <a class='struct' href='../../beagle/index/struct.Vec2Ref.html' title='beagle::index::Vec2Ref'>Vec2Ref</a>&lt;D, S, I0, I1&gt; <span class='where'>where D: <a class='trait' href='../../beagle/consts/trait.Dim.html' title='beagle::consts::Dim'>Dim</a>&lt;S&gt; + <a class='trait' href='../../beagle/consts/trait.IsLargerThan.html' title='beagle::consts::IsLargerThan'>IsLargerThan</a>&lt;I0&gt; + <a class='trait' href='../../beagle/consts/trait.IsLargerThan.html' title='beagle::consts::IsLargerThan'>IsLargerThan</a>&lt;I1&gt;, D2: <a class='trait' href='../../beagle/consts/trait.Dim.html' title='beagle::consts::Dim'>Dim</a>&lt;T&gt;, I0: <a class='trait' href='../../beagle/consts/trait.IsSmallerThan.html' title='beagle::consts::IsSmallerThan'>IsSmallerThan</a>&lt;D&gt;, I1: <a class='trait' href='../../beagle/consts/trait.IsSmallerThan.html' title='beagle::consts::IsSmallerThan'>IsSmallerThan</a>&lt;D&gt;, D::Smaller: <a class='trait' href='../../beagle/consts/trait.Array.html' title='beagle::consts::Array'>Array</a>&lt;S&gt;, D2::Smaller: <a class='trait' href='../../beagle/consts/trait.Array.html' title='beagle::consts::Array'>Array</a>&lt;T&gt;</span></code></li>
+<li><code>impl&lt;'a, S, T, D, D2, I0, I1, I2&gt; HasConcreteScalarArray&lt;T, D2&gt; for &amp;'a <a class='struct' href='../../beagle/index/struct.Vec3Ref.html' title='beagle::index::Vec3Ref'>Vec3Ref</a>&lt;D, S, I0, I1, I2&gt; <span class='where'>where D: <a class='trait' href='../../beagle/consts/trait.Dim.html' title='beagle::consts::Dim'>Dim</a>&lt;S&gt; + <a class='trait' href='../../beagle/consts/trait.IsLargerThan.html' title='beagle::consts::IsLargerThan'>IsLargerThan</a>&lt;I0&gt; + <a class='trait' href='../../beagle/consts/trait.IsLargerThan.html' title='beagle::consts::IsLargerThan'>IsLargerThan</a>&lt;I1&gt; + <a class='trait' href='../../beagle/consts/trait.IsLargerThan.html' title='beagle::consts::IsLargerThan'>IsLargerThan</a>&lt;I2&gt;, D2: <a class='trait' href='../../beagle/consts/trait.Dim.html' title='beagle::consts::Dim'>Dim</a>&lt;T&gt;, I0: <a class='trait' href='../../beagle/consts/trait.IsSmallerThan.html' title='beagle::consts::IsSmallerThan'>IsSmallerThan</a>&lt;D&gt;, I1: <a class='trait' href='../../beagle/consts/trait.IsSmallerThan.html' title='beagle::consts::IsSmallerThan'>IsSmallerThan</a>&lt;D&gt;, I2: <a class='trait' href='../../beagle/consts/trait.IsSmallerThan.html' title='beagle::consts::IsSmallerThan'>IsSmallerThan</a>&lt;D&gt;, D::Smaller: <a class='trait' href='../../beagle/consts/trait.Array.html' title='beagle::consts::Array'>Array</a>&lt;S&gt;, D2::Smaller: <a class='trait' href='../../beagle/consts/trait.Array.html' title='beagle::consts::Array'>Array</a>&lt;T&gt;</span></code></li>
+<li><code>impl&lt;'a, S, T, D, D2, I0, I1, I2&gt; HasConcreteScalarArray&lt;T, D2&gt; for &amp;'a mut <a class='struct' href='../../beagle/index/struct.Vec3Ref.html' title='beagle::index::Vec3Ref'>Vec3Ref</a>&lt;D, S, I0, I1, I2&gt; <span class='where'>where D: <a class='trait' href='../../beagle/consts/trait.Dim.html' title='beagle::consts::Dim'>Dim</a>&lt;S&gt; + <a class='trait' href='../../beagle/consts/trait.IsLargerThan.html' title='beagle::consts::IsLargerThan'>IsLargerThan</a>&lt;I0&gt; + <a class='trait' href='../../beagle/consts/trait.IsLargerThan.html' title='beagle::consts::IsLargerThan'>IsLargerThan</a>&lt;I1&gt; + <a class='trait' href='../../beagle/consts/trait.IsLargerThan.html' title='beagle::consts::IsLargerThan'>IsLargerThan</a>&lt;I2&gt;, D2: <a class='trait' href='../../beagle/consts/trait.Dim.html' title='beagle::consts::Dim'>Dim</a>&lt;T&gt;, I0: <a class='trait' href='../../beagle/consts/trait.IsSmallerThan.html' title='beagle::consts::IsSmallerThan'>IsSmallerThan</a>&lt;D&gt;, I1: <a class='trait' href='../../beagle/consts/trait.IsSmallerThan.html' title='beagle::consts::IsSmallerThan'>IsSmallerThan</a>&lt;D&gt;, I2: <a class='trait' href='../../beagle/consts/trait.IsSmallerThan.html' title='beagle::consts::IsSmallerThan'>IsSmallerThan</a>&lt;D&gt;, D::Smaller: <a class='trait' href='../../beagle/consts/trait.Array.html' title='beagle::consts::Array'>Array</a>&lt;S&gt;, D2::Smaller: <a class='trait' href='../../beagle/consts/trait.Array.html' title='beagle::consts::Array'>Array</a>&lt;T&gt;</span></code></li>
+<li><code>impl&lt;'a, S, T, D, D2, I0, I1, I2, I3&gt; HasConcreteScalarArray&lt;T, D2&gt; for &amp;'a <a class='struct' href='../../beagle/index/struct.Vec4Ref.html' title='beagle::index::Vec4Ref'>Vec4Ref</a>&lt;D, S, I0, I1, I2, I3&gt; <span class='where'>where D: <a class='trait' href='../../beagle/consts/trait.Dim.html' title='beagle::consts::Dim'>Dim</a>&lt;S&gt; + <a class='trait' href='../../beagle/consts/trait.IsLargerThan.html' title='beagle::consts::IsLargerThan'>IsLargerThan</a>&lt;I0&gt; + <a class='trait' href='../../beagle/consts/trait.IsLargerThan.html' title='beagle::consts::IsLargerThan'>IsLargerThan</a>&lt;I1&gt; + <a class='trait' href='../../beagle/consts/trait.IsLargerThan.html' title='beagle::consts::IsLargerThan'>IsLargerThan</a>&lt;I2&gt; + <a class='trait' href='../../beagle/consts/trait.IsLargerThan.html' title='beagle::consts::IsLargerThan'>IsLargerThan</a>&lt;I3&gt;, D2: <a class='trait' href='../../beagle/consts/trait.Dim.html' title='beagle::consts::Dim'>Dim</a>&lt;T&gt;, I0: <a class='trait' href='../../beagle/consts/trait.IsSmallerThan.html' title='beagle::consts::IsSmallerThan'>IsSmallerThan</a>&lt;D&gt;, I1: <a class='trait' href='../../beagle/consts/trait.IsSmallerThan.html' title='beagle::consts::IsSmallerThan'>IsSmallerThan</a>&lt;D&gt;, I2: <a class='trait' href='../../beagle/consts/trait.IsSmallerThan.html' title='beagle::consts::IsSmallerThan'>IsSmallerThan</a>&lt;D&gt;, I3: <a class='trait' href='../../beagle/consts/trait.IsSmallerThan.html' title='beagle::consts::IsSmallerThan'>IsSmallerThan</a>&lt;D&gt;, D::Smaller: <a class='trait' href='../../beagle/consts/trait.Array.html' title='beagle::consts::Array'>Array</a>&lt;S&gt;, D2::Smaller: <a class='trait' href='../../beagle/consts/trait.Array.html' title='beagle::consts::Array'>Array</a>&lt;T&gt;</span></code></li>
+<li><code>impl&lt;'a, S, T, D, D2, I0, I1, I2, I3&gt; HasConcreteScalarArray&lt;T, D2&gt; for &amp;'a mut <a class='struct' href='../../beagle/index/struct.Vec4Ref.html' title='beagle::index::Vec4Ref'>Vec4Ref</a>&lt;D, S, I0, I1, I2, I3&gt; <span class='where'>where D: <a class='trait' href='../../beagle/consts/trait.Dim.html' title='beagle::consts::Dim'>Dim</a>&lt;S&gt; + <a class='trait' href='../../beagle/consts/trait.IsLargerThan.html' title='beagle::consts::IsLargerThan'>IsLargerThan</a>&lt;I0&gt; + <a class='trait' href='../../beagle/consts/trait.IsLargerThan.html' title='beagle::consts::IsLargerThan'>IsLargerThan</a>&lt;I1&gt; + <a class='trait' href='../../beagle/consts/trait.IsLargerThan.html' title='beagle::consts::IsLargerThan'>IsLargerThan</a>&lt;I2&gt; + <a class='trait' href='../../beagle/consts/trait.IsLargerThan.html' title='beagle::consts::IsLargerThan'>IsLargerThan</a>&lt;I3&gt;, D2: <a class='trait' href='../../beagle/consts/trait.Dim.html' title='beagle::consts::Dim'>Dim</a>&lt;T&gt;, I0: <a class='trait' href='../../beagle/consts/trait.IsSmallerThan.html' title='beagle::consts::IsSmallerThan'>IsSmallerThan</a>&lt;D&gt;, I1: <a class='trait' href='../../beagle/consts/trait.IsSmallerThan.html' title='beagle::consts::IsSmallerThan'>IsSmallerThan</a>&lt;D&gt;, I2: <a class='trait' href='../../beagle/consts/trait.IsSmallerThan.html' title='beagle::consts::IsSmallerThan'>IsSmallerThan</a>&lt;D&gt;, I3: <a class='trait' href='../../beagle/consts/trait.IsSmallerThan.html' title='beagle::consts::IsSmallerThan'>IsSmallerThan</a>&lt;D&gt;, D::Smaller: <a class='trait' href='../../beagle/consts/trait.Array.html' title='beagle::consts::Array'>Array</a>&lt;S&gt;, D2::Smaller: <a class='trait' href='../../beagle/consts/trait.Array.html' title='beagle::consts::Array'>Array</a>&lt;T&gt;</span></code></li>
+<li><code>impl&lt;S, T, C:&nbsp;<a class='trait' href='../../beagle/consts/trait.Dim.html' title='beagle::consts::Dim'>Dim</a>&lt;S&gt;, C2:&nbsp;<a class='trait' href='../../beagle/consts/trait.Dim.html' title='beagle::consts::Dim'>Dim</a>&lt;T&gt;, R:&nbsp;<a class='trait' href='../../beagle/consts/trait.TwoDim.html' title='beagle::consts::TwoDim'>TwoDim</a>&lt;S, C&gt;, R2:&nbsp;<a class='trait' href='../../beagle/consts/trait.TwoDim.html' title='beagle::consts::TwoDim'>TwoDim</a>&lt;T, C2&gt;&gt; HasConcreteScalarArray&lt;T, C2, R2&gt; for <a class='struct' href='../../beagle/mat/struct.Mat.html' title='beagle::mat::Mat'>Mat</a>&lt;R, C, S&gt; <span class='where'>where C::Smaller: <a class='trait' href='../../beagle/consts/trait.Array.html' title='beagle::consts::Array'>Array</a>&lt;S&gt;, C2::Smaller: <a class='trait' href='../../beagle/consts/trait.Array.html' title='beagle::consts::Array'>Array</a>&lt;T&gt;, R::Smaller: <a class='trait' href='../../beagle/consts/trait.Array.html' title='beagle::consts::Array'>Array</a>&lt;C::Type&gt;, R2::Smaller: <a class='trait' href='../../beagle/consts/trait.Array.html' title='beagle::consts::Array'>Array</a>&lt;C2::Type&gt;</span></code></li>
+<li><code>impl&lt;S, T, D:&nbsp;<a class='trait' href='../../beagle/consts/trait.Dim.html' title='beagle::consts::Dim'>Dim</a>&lt;S&gt;, D2:&nbsp;<a class='trait' href='../../beagle/consts/trait.Dim.html' title='beagle::consts::Dim'>Dim</a>&lt;T&gt;&gt; HasConcreteScalarArray&lt;T, D2&gt; for <a class='struct' href='../../beagle/vec/struct.Vec.html' title='beagle::vec::Vec'>Vec</a>&lt;D, S&gt; <span class='where'>where D::Smaller: <a class='trait' href='../../beagle/consts/trait.Array.html' title='beagle::consts::Array'>Array</a>&lt;S&gt;, D2::Smaller: <a class='trait' href='../../beagle/consts/trait.Array.html' title='beagle::consts::Array'>Array</a>&lt;T&gt;</span></code></li>
+</ul><script type="text/javascript" async
+                         src="../../implementors/beagle/scalar_array/trait.HasConcreteScalarArray.js">
+                 </script></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt>+</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../../";
+        window.currentCrate = "beagle";
+    </script>
+    <script src="../../jquery.js"></script>
+    <script src="../../main.js"></script>
+    <script defer src="../../search-index.js"></script>
+</body>
+</html>

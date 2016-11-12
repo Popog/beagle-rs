@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `vec` mod in crate `beagle`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, vec">
+
+    <title>beagle::vec - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'><a href='../index.html'>beagle</a></p><script>window.sidebarCurrent = {name: 'vec', ty: 'mod', relpath: '../'};</script><script defer src="../sidebar-items.js"></script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content mod">
+<h1 class='fqn'><span class='in-band'>Module <a href='../index.html'>beagle</a>::<wbr><a class='mod' href=''>vec</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a id='src-1488' class='srclink' href='../../src/beagle/src/vec.rs.html#1-775' title='goto source code'>[src]</a></span></h1>
+<div class='docblock'><p>An array of Scalars, written <code>Vec&lt;D, V&gt;</code> but pronounced &#39;vector&#39;.</p>
+
+<p>Vectors support binary operations between two Vectors or between one Vector and one Scalar.
+All Arithmetic operators and Bitwise operators are supported, where the two Scalar types
+involved support the operation. All operations operate on each component separately.</p>
+
+<p>Vectors also support Negation and Logical Negation where the underlying Scalar Type supports
+it.</p>
+
+<h1 id='examples' class='section-header'><a href='#examples'>Examples</a></h1>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>beagle</span>::<span class='ident'>vec</span>::{<span class='ident'>Vec3</span>};
+
+<span class='kw'>let</span> <span class='ident'>v1</span> <span class='op'>=</span> <span class='ident'>Vec3</span>::<span class='ident'>new</span>([<span class='number'>2f32</span>, <span class='number'>3f32</span>, <span class='number'>5f32</span>]);
+<span class='kw'>let</span> <span class='ident'>v2</span> <span class='op'>=</span> <span class='ident'>Vec3</span>::<span class='ident'>new</span>([<span class='number'>7f32</span>, <span class='number'>11f32</span>, <span class='number'>13f32</span>]);
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>v1</span><span class='op'>+</span><span class='ident'>v2</span>, <span class='ident'>Vec3</span>::<span class='ident'>new</span>([<span class='number'>9f32</span>, <span class='number'>14f32</span>, <span class='number'>18f32</span>]));</pre>
+</div><h2 id='structs' class='section-header'><a href="#structs">Structs</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class='struct' href='struct.Vec.html'
+                                  title='beagle::vec::Vec'>Vec</a></td>
+                           <td class='docblock-short'>
+                                <p>An array of Scalars, written <code>Vec&lt;D, V&gt;</code> but pronounced &#39;vector&#39;.</p>
+                           </td>
+                       </tr></table><h2 id='functions' class='section-header'><a href="#functions">Functions</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.cross.html'
+                                  title='beagle::vec::cross'>cross</a></td>
+                           <td class='docblock-short'>
+                                <p>Returns the cross product of <code>s</code> and <code>t</code>.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.distance.html'
+                                  title='beagle::vec::distance'>distance</a></td>
+                           <td class='docblock-short'>
+                                <p>Returns the distance between <code>lhs</code> and <code>rhs</code>.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.distance2.html'
+                                  title='beagle::vec::distance2'>distance2</a></td>
+                           <td class='docblock-short'>
+                                <p>Returns the distance squared between <code>lhs</code> and <code>rhs</code>.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.dot.html'
+                                  title='beagle::vec::dot'>dot</a></td>
+                           <td class='docblock-short'>
+                                <p>Multiply two Vectors component-wise, summing the results. Known as a dot product.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.faceforward.html'
+                                  title='beagle::vec::faceforward'>faceforward</a></td>
+                           <td class='docblock-short'>
+                                <p>Returns <code>n</code> if <code>nref.dot(i)</code> is negative, else <code>-n</code>.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.is_perpendicular.html'
+                                  title='beagle::vec::is_perpendicular'>is_perpendicular</a></td>
+                           <td class='docblock-short'>
+                                <p>Returns <code>cos²(θ) &lt; ε²</code>, where <code>θ</code> = the angle between <code>a</code> and <code>b</code>.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.length.html'
+                                  title='beagle::vec::length'>length</a></td>
+                           <td class='docblock-short'>
+                                <p>Returns the length of <code>s</code>.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.length2.html'
+                                  title='beagle::vec::length2'>length2</a></td>
+                           <td class='docblock-short'>
+                                <p>Returns the length squared of <code>s</code>.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.normalize.html'
+                                  title='beagle::vec::normalize'>normalize</a></td>
+                           <td class='docblock-short'>
+                                <p>Returns an approximated normalized version of <code>s</code>. This is generally faster than <code>normalize_exact</code>.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.normalize_exact.html'
+                                  title='beagle::vec::normalize_exact'>normalize_exact</a></td>
+                           <td class='docblock-short'>
+                                <p>Returns an exact normalized version of <code>s</code>. Basically <code>v / v.length()</code></p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.reflect.html'
+                                  title='beagle::vec::reflect'>reflect</a></td>
+                           <td class='docblock-short'>
+                                <p>Reflects <code>i</code> against <code>n</code> as <code>i - n * dot(i,n) * 2</code>.</p>
+                           </td>
+                       </tr></table><h2 id='types' class='section-header'><a href="#types">Type Definitions</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class='type' href='type.Vec1.html'
+                                  title='beagle::vec::Vec1'>Vec1</a></td>
+                           <td class='docblock-short'>
+                                <p>An alias for Vec&lt;One, V&gt;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='type' href='type.Vec2.html'
+                                  title='beagle::vec::Vec2'>Vec2</a></td>
+                           <td class='docblock-short'>
+                                <p>An alias for Vec&lt;One, V&gt;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='type' href='type.Vec3.html'
+                                  title='beagle::vec::Vec3'>Vec3</a></td>
+                           <td class='docblock-short'>
+                                <p>An alias for Vec&lt;One, V&gt;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='type' href='type.Vec4.html'
+                                  title='beagle::vec::Vec4'>Vec4</a></td>
+                           <td class='docblock-short'>
+                                <p>An alias for Vec&lt;One, V&gt;</p>
+                           </td>
+                       </tr></table></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt>+</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../../";
+        window.currentCrate = "beagle";
+    </script>
+    <script src="../../jquery.js"></script>
+    <script src="../../main.js"></script>
+    <script defer src="../../search-index.js"></script>
+</body>
+</html>

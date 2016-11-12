@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `Clamp` trait in crate `beagle`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, Clamp">
+
+    <title>beagle::num::Clamp - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'><a href='../index.html'>beagle</a>::<wbr><a href='index.html'>num</a></p><script>window.sidebarCurrent = {name: 'Clamp', ty: 'trait', relpath: ''};</script><script defer src="sidebar-items.js"></script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content trait">
+<h1 class='fqn'><span class='in-band'>Trait <a href='../index.html'>beagle</a>::<wbr><a href='index.html'>num</a>::<wbr><a class='trait' href=''>Clamp</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a id='src-1762' class='srclink' href='../../src/beagle/src/num.rs.html#37-49' title='goto source code'>[src]</a></span></h1>
+<pre class='rust trait'>pub trait Clamp&lt;Rhs&nbsp;=&nbsp;Self&gt;: <a class='trait' href='https://doc.rust-lang.org/nightly/core/marker/trait.Sized.html' title='core::marker::Sized'>Sized</a> {
+    type <a href='#associatedtype.Output' class='type'>Output</a>;
+    fn <a href='#tymethod.min' class='fnname'>min</a>(self, rhs: Rhs) -&gt; Self::Output;
+    fn <a href='#tymethod.max' class='fnname'>max</a>(self, rhs: Rhs) -&gt; Self::Output;
+    fn <a href='#tymethod.clamp' class='fnname'>clamp</a>(self, min: Rhs, max: Rhs) -&gt; Self::Output;
+}</pre><div class='docblock'><p>Types that can be clamped</p>
+</div>
+            <h2 id='associated-types'>Associated Types</h2>
+            <div class='methods'>
+        <h3 id='associatedtype.Output' class='method stab '><span id='Output.t' class='invisible'><code>type <a href='#associatedtype.Output' class='type'>Output</a></code></span></h3><div class='docblock'><p>The output type</p>
+</div></div>
+            <h2 id='required-methods'>Required Methods</h2>
+            <div class='methods'>
+        <h3 id='tymethod.min' class='method stab '><span id='min.v' class='invisible'><code>fn <a href='#tymethod.min' class='fnname'>min</a>(self, rhs: Rhs) -&gt; Self::Output</code></span></h3><div class='docblock'><p>Returns the minimum of the two numbers.
+If one of the arguments is NaN, then the other argument is returned.</p>
+</div><h3 id='tymethod.max' class='method stab '><span id='max.v' class='invisible'><code>fn <a href='#tymethod.max' class='fnname'>max</a>(self, rhs: Rhs) -&gt; Self::Output</code></span></h3><div class='docblock'><p>Returns the minimum of the two numbers.
+If one of the arguments is NaN, then the other argument is returned.</p>
+</div><h3 id='tymethod.clamp' class='method stab '><span id='clamp.v' class='invisible'><code>fn <a href='#tymethod.clamp' class='fnname'>clamp</a>(self, min: Rhs, max: Rhs) -&gt; Self::Output</code></span></h3><div class='docblock'><p>Returns the value of <code>self</code> constrained to the range [<code>min_val</code>, <code>max_val</code>]
+The returned value is computed as min(max(self, <code>min_val</code>), <code>mal_val</code>).</p>
+</div></div>
+        <h2 id='implementors'>Implementors</h2>
+        <ul class='item-list' id='implementors-list'>
+    <li><code>impl&lt;Lhs, Rhs&gt; Clamp&lt;Rhs&gt; for Lhs <span class='where'>where Lhs: <a class='trait' href='../../beagle/scalar_array/trait.ScalarArrayVal.html' title='beagle::scalar_array::ScalarArrayVal'>ScalarArrayVal</a>, Rhs: <a class='trait' href='../../beagle/scalar_array/trait.ScalarArrayVal.html' title='beagle::scalar_array::ScalarArrayVal'>ScalarArrayVal</a>&lt;Row=Lhs::Row, Dim=Lhs::Dim&gt;, Lhs::Row: <a class='trait' href='../../beagle/consts/trait.Dim.html' title='beagle::consts::Dim'>Dim</a>&lt;Rhs::Scalar&gt;, Lhs::Dim: <a class='trait' href='../../beagle/consts/trait.TwoDim.html' title='beagle::consts::TwoDim'>TwoDim</a>&lt;Rhs::Scalar, Lhs::Row&gt;, Lhs::Scalar: <a class='trait' href='../../beagle/num/trait.Clamp.html' title='beagle::num::Clamp'>Clamp</a>&lt;Rhs::Scalar&gt;, Lhs: <a class='trait' href='../../beagle/scalar_array/trait.HasConcreteScalarArray.html' title='beagle::scalar_array::HasConcreteScalarArray'>HasConcreteScalarArray</a>&lt;Lhs::Scalar::Output&gt;, Lhs::Row: <a class='trait' href='../../beagle/consts/trait.Dim.html' title='beagle::consts::Dim'>Dim</a>&lt;Lhs::Scalar::Output&gt;, Lhs::Dim: <a class='trait' href='../../beagle/consts/trait.TwoDim.html' title='beagle::consts::TwoDim'>TwoDim</a>&lt;Lhs::Scalar::Output, Lhs::Row&gt;, Lhs::Row::Smaller: <a class='trait' href='../../beagle/consts/trait.Array.html' title='beagle::consts::Array'>Array</a>&lt;Lhs::Scalar&gt; + <a class='trait' href='../../beagle/consts/trait.Array.html' title='beagle::consts::Array'>Array</a>&lt;Rhs::Scalar&gt; + <a class='trait' href='../../beagle/consts/trait.Array.html' title='beagle::consts::Array'>Array</a>&lt;Lhs::Scalar::Output&gt;, Lhs::Dim::Smaller: <a class='trait' href='../../beagle/consts/trait.Array.html' title='beagle::consts::Array'>Array</a>&lt;Lhs::Row::Type&gt; + <a class='trait' href='../../beagle/consts/trait.Array.html' title='beagle::consts::Array'>Array</a>&lt;Rhs::Row::Type&gt; + <a class='trait' href='../../beagle/consts/trait.Array.html' title='beagle::consts::Array'>Array</a>&lt;Lhs::Row::Type&gt;</span></code></li>
+<li><code>impl&lt;Lhs, Rhs&gt; Clamp&lt;<a class='struct' href='../../beagle/struct.Value.html' title='beagle::Value'>Value</a>&lt;Rhs&gt;&gt; for Lhs <span class='where'>where Lhs: <a class='trait' href='../../beagle/scalar_array/trait.ScalarArrayVal.html' title='beagle::scalar_array::ScalarArrayVal'>ScalarArrayVal</a>, Rhs: <a class='trait' href='https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a>, Lhs::Row: <a class='trait' href='../../beagle/consts/trait.Dim.html' title='beagle::consts::Dim'>Dim</a>&lt;Rhs&gt;, Lhs::Row::Type: <a class='trait' href='https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a>, Lhs::Dim: <a class='trait' href='../../beagle/consts/trait.TwoDim.html' title='beagle::consts::TwoDim'>TwoDim</a>&lt;Rhs, Lhs::Row&gt;, Lhs::Scalar: <a class='trait' href='../../beagle/num/trait.Clamp.html' title='beagle::num::Clamp'>Clamp</a>&lt;Rhs&gt;, Lhs: <a class='trait' href='../../beagle/scalar_array/trait.HasConcreteScalarArray.html' title='beagle::scalar_array::HasConcreteScalarArray'>HasConcreteScalarArray</a>&lt;Lhs::Scalar::Output&gt;, Lhs::Row: <a class='trait' href='../../beagle/consts/trait.Dim.html' title='beagle::consts::Dim'>Dim</a>&lt;Lhs::Scalar::Output&gt;, Lhs::Dim: <a class='trait' href='../../beagle/consts/trait.TwoDim.html' title='beagle::consts::TwoDim'>TwoDim</a>&lt;Lhs::Scalar::Output, Lhs::Row&gt;, Lhs::Row::Smaller: <a class='trait' href='../../beagle/consts/trait.Array.html' title='beagle::consts::Array'>Array</a>&lt;Lhs::Scalar&gt; + <a class='trait' href='../../beagle/consts/trait.Array.html' title='beagle::consts::Array'>Array</a>&lt;Rhs&gt; + <a class='trait' href='../../beagle/consts/trait.Array.html' title='beagle::consts::Array'>Array</a>&lt;Lhs::Scalar::Output&gt;, Lhs::Dim::Smaller: <a class='trait' href='../../beagle/consts/trait.Array.html' title='beagle::consts::Array'>Array</a>&lt;Lhs::Row::Type&gt; + <a class='trait' href='../../beagle/consts/trait.Array.html' title='beagle::consts::Array'>Array</a>&lt;Lhs::Row::Type&gt; + <a class='trait' href='../../beagle/consts/trait.Array.html' title='beagle::consts::Array'>Array</a>&lt;Lhs::Row::Type&gt;, Lhs::Concrete: <a class='trait' href='../../beagle/scalar_array/trait.HasConcreteScalarArray.html' title='beagle::scalar_array::HasConcreteScalarArray'>HasConcreteScalarArray</a>&lt;Lhs::Scalar::Output, Lhs::Row, Lhs::Dim, Concrete=Lhs::Concrete&gt;</span></code></li>
+<li><code>impl Clamp for <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.f32.html'>f32</a></code></li>
+<li><code>impl Clamp for <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.f64.html'>f64</a></code></li>
+<li><code>impl Clamp for <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.i8.html'>i8</a></code></li>
+<li><code>impl Clamp for <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.i16.html'>i16</a></code></li>
+<li><code>impl Clamp for <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.i32.html'>i32</a></code></li>
+<li><code>impl Clamp for <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.i64.html'>i64</a></code></li>
+<li><code>impl Clamp for <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.u8.html'>u8</a></code></li>
+<li><code>impl Clamp for <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.u16.html'>u16</a></code></li>
+<li><code>impl Clamp for <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a></code></li>
+<li><code>impl Clamp for <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.u64.html'>u64</a></code></li>
+</ul><script type="text/javascript" async
+                         src="../../implementors/beagle/num/trait.Clamp.js">
+                 </script></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt>+</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../../";
+        window.currentCrate = "beagle";
+    </script>
+    <script src="../../jquery.js"></script>
+    <script src="../../main.js"></script>
+    <script defer src="../../search-index.js"></script>
+</body>
+</html>

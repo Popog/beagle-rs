@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `scalar_array` mod in crate `beagle`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, scalar_array">
+
+    <title>beagle::scalar_array - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'><a href='../index.html'>beagle</a></p><script>window.sidebarCurrent = {name: 'scalar_array', ty: 'mod', relpath: '../'};</script><script defer src="../sidebar-items.js"></script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content mod">
+<h1 class='fqn'><span class='in-band'>Module <a href='../index.html'>beagle</a>::<wbr><a class='mod' href=''>scalar_array</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a id='src-657' class='srclink' href='../../src/beagle/src/scalar_array.rs.html#1-1548' title='goto source code'>[src]</a></span></h1>
+<div class='docblock'><p>Traits and functions that operate on <code>ScalarArrays</code>.</p>
+</div><h2 id='modules' class='section-header'><a href="#modules">Modules</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class='mod' href='array/index.html'
+                                  title='beagle::scalar_array::array'>array</a></td>
+                           <td class='docblock-short'>
+                                <p>Helpers for 2d arrays</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='mod' href='vec_array/index.html'
+                                  title='beagle::scalar_array::vec_array'>vec_array</a></td>
+                           <td class='docblock-short'>
+                                <p>Helpers for 1d arrays</p>
+                           </td>
+                       </tr></table><h2 id='traits' class='section-header'><a href="#traits">Traits</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class='trait' href='trait.ConcreteScalarArray.html'
+                                  title='beagle::scalar_array::ConcreteScalarArray'>ConcreteScalarArray</a></td>
+                           <td class='docblock-short'>
+                                <p>Matrix/Vector types that can be constructed</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='trait' href='trait.ConcreteVecArray.html'
+                                  title='beagle::scalar_array::ConcreteVecArray'>ConcreteVecArray</a></td>
+                           <td class='docblock-short'>
+                                <p>Vector types that can be constructed</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='trait' href='trait.HasConcreteScalarArray.html'
+                                  title='beagle::scalar_array::HasConcreteScalarArray'>HasConcreteScalarArray</a></td>
+                           <td class='docblock-short'>
+                                <p>Matrix/Vector types that have an associated constructable type</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='trait' href='trait.HasConcreteVecArray.html'
+                                  title='beagle::scalar_array::HasConcreteVecArray'>HasConcreteVecArray</a></td>
+                           <td class='docblock-short'>
+                                <p>Vector types that have an associated constructable type</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='trait' href='trait.ScalarArray.html'
+                                  title='beagle::scalar_array::ScalarArray'>ScalarArray</a></td>
+                           <td class='docblock-short'>
+                                <p>Types that represent a 2d array of scalars (a matrix or a vector).</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='trait' href='trait.ScalarArrayMut.html'
+                                  title='beagle::scalar_array::ScalarArrayMut'>ScalarArrayMut</a></td>
+                           <td class='docblock-short'>
+                                <p>Matrix/Vector types that can be mutated</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='trait' href='trait.ScalarArrayRef.html'
+                                  title='beagle::scalar_array::ScalarArrayRef'>ScalarArrayRef</a></td>
+                           <td class='docblock-short'>
+                                <p>Matrix/Vector types that can be references</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='trait' href='trait.ScalarArrayVal.html'
+                                  title='beagle::scalar_array::ScalarArrayVal'>ScalarArrayVal</a></td>
+                           <td class='docblock-short'>
+                                <p>Matrix/Vector types that can be deconstructed</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='trait' href='trait.VecArrayRef.html'
+                                  title='beagle::scalar_array::VecArrayRef'>VecArrayRef</a></td>
+                           <td class='docblock-short'>
+                                <p>Vector types that can be references</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='trait' href='trait.VecArrayVal.html'
+                                  title='beagle::scalar_array::VecArrayVal'>VecArrayVal</a></td>
+                           <td class='docblock-short'>
+                                <p>Vector types that can be deconstructed</p>
+                           </td>
+                       </tr></table><h2 id='functions' class='section-header'><a href="#functions">Functions</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.apply.html'
+                                  title='beagle::scalar_array::apply'>apply</a></td>
+                           <td class='docblock-short'>
+                                <p>Apply a function to all elements of a <code>ScalarArray</code></p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.apply2.html'
+                                  title='beagle::scalar_array::apply2'>apply2</a></td>
+                           <td class='docblock-short'>
+                                <p>Apply a function to all elements of two <code>ScalarArray</code>s</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.apply2_mut.html'
+                                  title='beagle::scalar_array::apply2_mut'>apply2_mut</a></td>
+                           <td class='docblock-short'>
+                                <p>Apply a function to all elements of two <code>ScalarArray</code>s</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.apply2_mut_ref.html'
+                                  title='beagle::scalar_array::apply2_mut_ref'>apply2_mut_ref</a></td>
+                           <td class='docblock-short'>
+                                <p>Apply a function to all elements of two <code>ScalarArray</code>s</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.apply2_mut_val.html'
+                                  title='beagle::scalar_array::apply2_mut_val'>apply2_mut_val</a></td>
+                           <td class='docblock-short'>
+                                <p>Apply a function to all elements of two <code>ScalarArray</code>s</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.apply2_ref.html'
+                                  title='beagle::scalar_array::apply2_ref'>apply2_ref</a></td>
+                           <td class='docblock-short'>
+                                <p>Apply a function to all elements of two <code>ScalarArray</code>s</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.apply2_ref_mut.html'
+                                  title='beagle::scalar_array::apply2_ref_mut'>apply2_ref_mut</a></td>
+                           <td class='docblock-short'>
+                                <p>Apply a function to all elements of two <code>ScalarArray</code>s</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.apply2_ref_val.html'
+                                  title='beagle::scalar_array::apply2_ref_val'>apply2_ref_val</a></td>
+                           <td class='docblock-short'>
+                                <p>Apply a function to all elements of two <code>ScalarArray</code>s</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.apply2_val_mut.html'
+                                  title='beagle::scalar_array::apply2_val_mut'>apply2_val_mut</a></td>
+                           <td class='docblock-short'>
+                                <p>Apply a function to all elements of two <code>ScalarArray</code>s</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.apply2_val_ref.html'
+                                  title='beagle::scalar_array::apply2_val_ref'>apply2_val_ref</a></td>
+                           <td class='docblock-short'>
+                                <p>Apply a function to all elements of two <code>ScalarArray</code>s</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.apply_mut.html'
+                                  title='beagle::scalar_array::apply_mut'>apply_mut</a></td>
+                           <td class='docblock-short'>
+                                <p>Apply a function to all elements of a <code>ScalarArray</code></p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.apply_ref.html'
+                                  title='beagle::scalar_array::apply_ref'>apply_ref</a></td>
+                           <td class='docblock-short'>
+                                <p>Apply a function to all elements of a <code>ScalarArray</code></p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.cpt_cmp.html'
+                                  title='beagle::scalar_array::cpt_cmp'>cpt_cmp</a></td>
+                           <td class='docblock-short'>
+                                <p>Construct a <code>ScalarArray</code> based on the ordering of the components of two <code>ScalarArray</code>.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.cpt_eq.html'
+                                  title='beagle::scalar_array::cpt_eq'>cpt_eq</a></td>
+                           <td class='docblock-short'>
+                                <p>Construct a <code>ScalarArray</code> based on the equality of the components of two <code>ScalarArray</code>.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.cpt_ge.html'
+                                  title='beagle::scalar_array::cpt_ge'>cpt_ge</a></td>
+                           <td class='docblock-short'>
+                                <p>Construct a <code>ScalarArray</code> based on the <code>&gt;=</code> comparison of the components of two <code>ScalarArray</code>.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.cpt_gt.html'
+                                  title='beagle::scalar_array::cpt_gt'>cpt_gt</a></td>
+                           <td class='docblock-short'>
+                                <p>Construct a <code>ScalarArray</code> based on the <code>&gt;</code> comparison of the components of two <code>ScalarArray</code>.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.cpt_le.html'
+                                  title='beagle::scalar_array::cpt_le'>cpt_le</a></td>
+                           <td class='docblock-short'>
+                                <p>Construct a <code>ScalarArray</code> based on the <code>&lt;=</code> comparison of the components of two <code>ScalarArray</code>.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.cpt_lt.html'
+                                  title='beagle::scalar_array::cpt_lt'>cpt_lt</a></td>
+                           <td class='docblock-short'>
+                                <p>Construct a <code>ScalarArray</code> based on the <code>&lt;</code> comparison of the components of two <code>ScalarArray</code>.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.cpt_mul.html'
+                                  title='beagle::scalar_array::cpt_mul'>cpt_mul</a></td>
+                           <td class='docblock-short'>
+                                <p>Multiply two <code>ScalarArray</code>s component-wise.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.cpt_mul_assign.html'
+                                  title='beagle::scalar_array::cpt_mul_assign'>cpt_mul_assign</a></td>
+                           <td class='docblock-short'>
+                                <p>Multiply two <code>ScalarArray</code>s component-wise.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.cpt_ne.html'
+                                  title='beagle::scalar_array::cpt_ne'>cpt_ne</a></td>
+                           <td class='docblock-short'>
+                                <p>Construct a <code>ScalarArray</code> based on the inequality of the components of two <code>ScalarArray</code>.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.cpt_partial_cmp.html'
+                                  title='beagle::scalar_array::cpt_partial_cmp'>cpt_partial_cmp</a></td>
+                           <td class='docblock-short'>
+                                <p>Construct a <code>ScalarArray</code> based on the partial ordering of the components of two <code>ScalarArray</code>.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.fold.html'
+                                  title='beagle::scalar_array::fold'>fold</a></td>
+                           <td class='docblock-short'>
+                                <p>Fold all the scalars in a <code>ScalarArray</code>. The first element is mapped with <code>f0</code>,
+then folding continues with <code>f</code> for other elements.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.fold2.html'
+                                  title='beagle::scalar_array::fold2'>fold2</a></td>
+                           <td class='docblock-short'>
+                                <p>Fold all the scalars in two <code>ScalarArray</code>s. The first elements are mapped with <code>f0</code>,
+then folding continues with <code>f</code> for other elements.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.fold2_ref.html'
+                                  title='beagle::scalar_array::fold2_ref'>fold2_ref</a></td>
+                           <td class='docblock-short'>
+                                <p>Fold all the scalars in two <code>ScalarArray</code>s. The first elements are mapped with <code>f0</code>,
+then folding continues with <code>f</code> for other elements.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.fold_mut.html'
+                                  title='beagle::scalar_array::fold_mut'>fold_mut</a></td>
+                           <td class='docblock-short'>
+                                <p>Fold all the scalars in a <code>ScalarArray</code> by mutable reference. The first element is mapped with
+<code>f0</code>, then folding continues with <code>f</code> for other elements.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.fold_ref.html'
+                                  title='beagle::scalar_array::fold_ref'>fold_ref</a></td>
+                           <td class='docblock-short'>
+                                <p>Fold all the scalars in a <code>ScalarArray</code> by reference. The first element is mapped with <code>f0</code>,
+then folding continues with <code>f</code> for other elements.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.from_scalar.html'
+                                  title='beagle::scalar_array::from_scalar'>from_scalar</a></td>
+                           <td class='docblock-short'>
+                                <p>Construct a <code>ScalarArray</code> from a single value</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.map.html'
+                                  title='beagle::scalar_array::map'>map</a></td>
+                           <td class='docblock-short'>
+                                <p>Construct a <code>ScalarArray</code> from another <code>ScalarArray</code> and a mapping function</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.map2.html'
+                                  title='beagle::scalar_array::map2'>map2</a></td>
+                           <td class='docblock-short'>
+                                <p>Construct a <code>ScalarArray</code> from two other <code>ScalarArray</code> and a mapping function</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.map2_mut.html'
+                                  title='beagle::scalar_array::map2_mut'>map2_mut</a></td>
+                           <td class='docblock-short'>
+                                <p>Construct a <code>ScalarArray</code> from two other <code>ScalarArray</code> and a mapping function</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.map2_mut_ref.html'
+                                  title='beagle::scalar_array::map2_mut_ref'>map2_mut_ref</a></td>
+                           <td class='docblock-short'>
+                                <p>Construct a <code>ScalarArray</code> from two other <code>ScalarArray</code> and a mapping function</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.map2_mut_val.html'
+                                  title='beagle::scalar_array::map2_mut_val'>map2_mut_val</a></td>
+                           <td class='docblock-short'>
+                                <p>Construct a <code>ScalarArray</code> from two other <code>ScalarArray</code> and a mapping function</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.map2_ref.html'
+                                  title='beagle::scalar_array::map2_ref'>map2_ref</a></td>
+                           <td class='docblock-short'>
+                                <p>Construct a <code>ScalarArray</code> from two other <code>ScalarArray</code> and a mapping function</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.map2_ref_mut.html'
+                                  title='beagle::scalar_array::map2_ref_mut'>map2_ref_mut</a></td>
+                           <td class='docblock-short'>
+                                <p>Construct a <code>ScalarArray</code> from two other <code>ScalarArray</code> and a mapping function</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.map2_ref_val.html'
+                                  title='beagle::scalar_array::map2_ref_val'>map2_ref_val</a></td>
+                           <td class='docblock-short'>
+                                <p>Construct a <code>ScalarArray</code> from two other <code>ScalarArray</code> and a mapping function</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.map2_val_mut.html'
+                                  title='beagle::scalar_array::map2_val_mut'>map2_val_mut</a></td>
+                           <td class='docblock-short'>
+                                <p>Construct a <code>ScalarArray</code> from two other <code>ScalarArray</code> and a mapping function</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.map2_val_ref.html'
+                                  title='beagle::scalar_array::map2_val_ref'>map2_val_ref</a></td>
+                           <td class='docblock-short'>
+                                <p>Construct a <code>ScalarArray</code> from two other <code>ScalarArray</code> and a mapping function</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.map3.html'
+                                  title='beagle::scalar_array::map3'>map3</a></td>
+                           <td class='docblock-short'>
+                                <p>Construct a <code>ScalarArray</code> from three other <code>ScalarArray</code> and a mapping function</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.map_into_2.html'
+                                  title='beagle::scalar_array::map_into_2'>map_into_2</a></td>
+                           <td class='docblock-short'>
+                                <p>Construct two <code>ScalarArray</code>s from a <code>ScalarArray</code> and a mapping function</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.map_mut.html'
+                                  title='beagle::scalar_array::map_mut'>map_mut</a></td>
+                           <td class='docblock-short'>
+                                <p>Construct a <code>ScalarArray</code> from another <code>ScalarArray</code> by reference and a mapping function</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.map_ref.html'
+                                  title='beagle::scalar_array::map_ref'>map_ref</a></td>
+                           <td class='docblock-short'>
+                                <p>Construct a <code>ScalarArray</code> from another <code>ScalarArray</code> by reference and a mapping function</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.mul_matrix.html'
+                                  title='beagle::scalar_array::mul_matrix'>mul_matrix</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.mul_vector.html'
+                                  title='beagle::scalar_array::mul_vector'>mul_vector</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.mul_vector_transpose.html'
+                                  title='beagle::scalar_array::mul_vector_transpose'>mul_vector_transpose</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.sum.html'
+                                  title='beagle::scalar_array::sum'>sum</a></td>
+                           <td class='docblock-short'>
+                                <p>Sums all the components of a <code>ScalarArray</code></p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class='fn' href='fn.transpose.html'
+                                  title='beagle::scalar_array::transpose'>transpose</a></td>
+                           <td class='docblock-short'>
+                                <p>Transposes a <code>ScalarArray</code></p>
+                           </td>
+                       </tr></table></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt>+</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../../";
+        window.currentCrate = "beagle";
+    </script>
+    <script src="../../jquery.js"></script>
+    <script src="../../main.js"></script>
+    <script defer src="../../search-index.js"></script>
+</body>
+</html>
