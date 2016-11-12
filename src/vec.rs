@@ -28,6 +28,12 @@ use std::ops::{
     Deref,DerefMut,
     Index,IndexMut,
 };
+#[cfg(feature="rand")]
+use rand::{Rand,Rng};
+#[cfg(feature="rustc-serialize")]
+use rustc_serialize::{Encodable,Encoder,Decodable,Decoder};
+#[cfg(feature="serde_all")]
+use serde::{Deserialize,Deserializer,Serialize,Serializer};
 
 use super::{Value,v};
 use consts::{
@@ -61,11 +67,67 @@ use utils::{ArrayRefCast,RefCast};
 ///
 /// Vectors also support Negation and Logical Negation where the underlying Scalar Type supports
 /// it.
+#[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Vec<D, S> (D::Type)
 where D: Dim<S>,
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
 D::Smaller: Array<S>;
+
+#[cfg(feature="rand")]
+impl <S: Rand, D: Dim<S>> Rand for Vec<D, S>
+where D::Type: Rand,
+// TODO: remove elaborted bounds. Blocked on rust/issues#20671
+D::Smaller: Array<S>,
+{
+    fn rand<R: Rng>(rng: &mut R) -> Self {
+        Vec(Rand::rand(rng))
+    }
+}
+
+#[cfg(feature="rustc-serialize")]
+impl <S: Encodable, D: Dim<S>> Encodable for Vec<D, S>
+where D::Type: Encodable,
+// TODO: remove elaborted bounds. Blocked on rust/issues#20671
+D::Smaller: Array<S>,
+{
+    fn encode<E: Encoder>(&self, e: &mut E) -> Result<(), E::Error> {
+        Encodable::encode(&self.0, e)
+    }
+}
+
+#[cfg(feature="rustc-serialize")]
+impl <S: Decodable, D: Dim<S>> Decodable for Vec<D, S>
+where D::Type: Decodable,
+// TODO: remove elaborted bounds. Blocked on rust/issues#20671
+D::Smaller: Array<S>,
+{
+    fn decode<D2: Decoder>(d: &mut D2) -> Result<Self, D2::Error> {
+        Ok(Vec(try!(Decodable::decode(d))))
+    }
+}
+
+#[cfg(feature="serde_all")]
+impl <S: Serialize, D: Dim<S>> Serialize for Vec<D, S>
+where D::Type: Serialize,
+// TODO: remove elaborted bounds. Blocked on rust/issues#20671
+D::Smaller: Array<S>,
+{
+    fn serialize<S2: Serializer>(&self, serializer: &mut S2) -> Result<(), S2::Error> {
+        Serialize::serialize(&self.0, serializer)
+    }
+}
+
+#[cfg(feature="serde_all")]
+impl <S: Deserialize, D: Dim<S>> Deserialize for Vec<D, S>
+where D::Type: Deserialize,
+// TODO: remove elaborted bounds. Blocked on rust/issues#20671
+D::Smaller: Array<S>,
+{
+    fn deserialize<D2: Deserializer>(deserializer: &mut D2) -> Result<Self, D2::Error> {
+        Ok(Vec(try!(Deserialize::deserialize(deserializer))))
+    }
+}
 
 impl<S, D: Dim<S>> Vec<D, S>
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
@@ -593,6 +655,28 @@ D::Smaller: Array<S> + Array<<C as Array<S>>::Type> + Array<<C as Array<T>>::Typ
 mod tests {
     use std::mem::size_of;
     use super::*;
+
+    /// Tests that the cfg output is what is expected
+    #[cfg(feature="rustc-serialize")]
+    #[test]
+    fn test_serialize() {
+        use rustc_serialize::json;
+
+        let v = Vec4::new([1, 2, 3, 4]);
+        // Serialize using `json::encode`
+        let encoded = json::encode(&v).unwrap();
+        assert_eq!("[1,2,3,4]", encoded);
+        let decoded = json::decode(&encoded).unwrap();
+        assert_eq!(v, decoded);
+    }
+
+    /// Tests that the debug output is what is expected
+    #[test]
+    fn test_debug() {
+        let v = Vec4::new([1, 2, 3, 4]);
+        let s = format!("{:?}", v);
+        assert_eq!("Vec([1, 2, 3, 4])", s);
+    }
 
     /// Test that Vec sizes are what they should be
     #[test]

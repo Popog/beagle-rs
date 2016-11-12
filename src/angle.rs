@@ -147,21 +147,29 @@ impl_angle_binop_assign!{ SubAssign::sub_assign for $id }
 }
 
 /// A 32-bit floating point angle in radians
+#[cfg_attr(feature="rustc-serialize", derive(RustcEncodable, RustcDecodable))]
+#[cfg_attr(feature="serde_all", derive(Serialize, Deserialize))]
 #[derive(Clone, Copy, Debug, Default, PartialEq, PartialOrd)]
 pub struct Rad32(f32);
 impl_angle!{Rad32: f32, 32, Rad32, f32::consts::PI}
 
 /// A 64-bit floating point angle in radians
+#[cfg_attr(feature="rustc-serialize", derive(RustcEncodable, RustcDecodable))]
+#[cfg_attr(feature="serde_all", derive(Serialize, Deserialize))]
 #[derive(Clone, Copy, Debug, Default, PartialEq, PartialOrd)]
 pub struct Rad64(f64);
 impl_angle!{Rad64: f64, 64, Rad64, f64::consts::PI}
 
 /// A 32-bit floating point angle in degrees
+#[cfg_attr(feature="rustc-serialize", derive(RustcEncodable, RustcDecodable))]
+#[cfg_attr(feature="serde_all", derive(Serialize, Deserialize))]
 #[derive(Clone, Copy, Debug, Default, PartialEq, PartialOrd)]
 pub struct Deg32(f32);
 impl_angle!{Deg32: f32, 32, Rad32, 360f32}
 
 /// A 64-bit floating point angle in degrees
+#[cfg_attr(feature="rustc-serialize", derive(RustcEncodable, RustcDecodable))]
+#[cfg_attr(feature="serde_all", derive(Serialize, Deserialize))]
 #[derive(Clone, Copy, Debug, Default, PartialEq, PartialOrd)]
 pub struct Deg64(f64);
 impl_angle!{Deg64: f64, 64, Rad64, 360f64}

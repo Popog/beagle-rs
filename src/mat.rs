@@ -40,6 +40,12 @@ use std::ops::{
     AddAssign,DivAssign,MulAssign,RemAssign,SubAssign,
     Deref,DerefMut,
 };
+#[cfg(feature="rand")]
+use rand::{Rand,Rng};
+#[cfg(feature="rustc-serialize")]
+use rustc_serialize::{Encodable,Encoder,Decodable,Decoder};
+#[cfg(feature="serde_all")]
+use serde::{Deserialize,Deserializer,Serialize,Serializer};
 
 use super::Value;
 use consts::{
@@ -74,6 +80,7 @@ use vec::Vec;
 ///
 /// Matrices also support Negation and Logical Negation where the underlying Scalar Type supports
 /// it.
+#[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Mat<R, C, S> (R::Type)
 where C: Dim<S>,
@@ -81,6 +88,71 @@ R: TwoDim<S, C>,
 // TODO: remove elaborted bounds. Blocked on rust/issues#20671
 C::Smaller: Array<S>,
 R::Smaller: Array<<C as Array<S>>::Type>;
+
+#[cfg(feature="rand")]
+impl <S: Rand, C: Dim<S>, R: TwoDim<S, C>> Rand for Mat<R, C, S>
+where C::Type: Rand,
+R::Type: Rand,
+// TODO: remove elaborted bounds. Blocked on rust/issues#20671
+C::Smaller: Array<S>,
+R::Smaller: Array<<C as Array<S>>::Type>,
+{
+    fn rand<R2: Rng>(rng: &mut R2) -> Self {
+        Mat(Rand::rand(rng))
+    }
+}
+
+#[cfg(feature="rustc-serialize")]
+impl <S: Encodable, C: Dim<S>, R: TwoDim<S, C>> Encodable for Mat<R, C, S>
+where C::Type: Encodable,
+R::Type: Encodable,
+// TODO: remove elaborted bounds. Blocked on rust/issues#20671
+C::Smaller: Array<S>,
+R::Smaller: Array<<C as Array<S>>::Type>,
+{
+    fn encode<E: Encoder>(&self, e: &mut E) -> Result<(), E::Error> {
+        Encodable::encode(&self.0, e)
+    }
+}
+
+#[cfg(feature="rustc-serialize")]
+impl <S: Encodable, C: Dim<S>, R: TwoDim<S, C>> Decodable for Mat<R, C, S>
+where C::Type: Decodable,
+R::Type: Decodable,
+// TODO: remove elaborted bounds. Blocked on rust/issues#20671
+C::Smaller: Array<S>,
+R::Smaller: Array<<C as Array<S>>::Type>,
+{
+    fn decode<D: Decoder>(d: &mut D) -> Result<Self, D::Error> {
+        Ok(Mat(try!(Decodable::decode(d))))
+    }
+}
+
+#[cfg(feature="serde_all")]
+impl <S: Serialize, C: Dim<S>, R: TwoDim<S, C>> Serialize for Mat<R, C, S>
+where C::Type: Serialize,
+R::Type: Serialize,
+// TODO: remove elaborted bounds. Blocked on rust/issues#20671
+C::Smaller: Array<S>,
+R::Smaller: Array<<C as Array<S>>::Type>,
+{
+    fn serialize<S2: Serializer>(&self, serializer: &mut S2) -> Result<(), S2::Error> {
+        Serialize::serialize(&self.0, serializer)
+    }
+}
+
+#[cfg(feature="serde_all")]
+impl <S: Deserialize, C: Dim<S>, R: TwoDim<S, C>> Deserialize for Mat<R, C, S>
+where C::Type: Deserialize,
+R::Type: Deserialize,
+// TODO: remove elaborted bounds. Blocked on rust/issues#20671
+C::Smaller: Array<S>,
+R::Smaller: Array<<C as Array<S>>::Type>,
+{
+    fn deserialize<D2: Deserializer>(deserializer: &mut D2) -> Result<Self, D2::Error> {
+        Ok(Mat(try!(Deserialize::deserialize(deserializer))))
+    }
+}
 
 /// An alias for Mat&lt;One, One, T&gt;
 pub type Mat1<T> = Mat<One, One, T>;
@@ -429,6 +501,28 @@ include!(concat!(env!("OUT_DIR"), "/mat.rs"));
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Tests that the cfg output is what is expected
+    #[cfg(feature="rustc-serialize")]
+    #[test]
+    fn test_serialize() {
+        use rustc_serialize::json;
+
+        let v = Mat2x2::new([[1, 2],[3, 4]]);
+        // Serialize using `json::encode`
+        let encoded = json::encode(&v).unwrap();
+        assert_eq!("[[1,2],[3,4]]", encoded);
+        let decoded = json::decode(&encoded).unwrap();
+        assert_eq!(v, decoded);
+    }
+
+    /// Tests that the debug output is what is expected
+    #[test]
+    fn test_debug() {
+        let v = Mat2x2::new([[1, 2],[3, 4]]);
+        let s = format!("{:?}", v);
+        assert_eq!("Mat([[1, 2], [3, 4]])", s);
+    }
 
     #[test]
     /// Test that Vec::new should deduce the type based on what is passed

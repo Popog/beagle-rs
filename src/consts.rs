@@ -3,8 +3,15 @@
 // TODO: more commments
 
 use std::borrow::{Borrow,BorrowMut};
+use std::fmt;
 use std::ops::{Deref,DerefMut};
 use std::mem::{forget,replace,uninitialized};
+#[cfg(feature="rand")]
+use rand::{Rand,Rng};
+#[cfg(feature="rustc-serialize")]
+use rustc_serialize::{Encodable,Encoder,Decodable,Decoder};
+#[cfg(feature="serde_all")]
+use serde::{Deserialize,Deserializer,Serialize,Serializer};
 
 use utils::RefCast;
 
@@ -238,8 +245,50 @@ macro_rules! impl_custom_array_inner {
     ($id:ident, $size:expr$(, $index:expr)*) => {
 /// An custom array of size $size which has as few restrictions as possible (e.g. doesn't restrict
 /// `Clone` impls to `T: Copy`).
-#[derive(Copy, Debug, PartialEq, PartialOrd, Ord, Eq, Hash)]
+#[repr(C)]
+#[derive(Copy, PartialEq, PartialOrd, Ord, Eq, Hash)]
 pub struct $id<T>(pub [T; $size]);
+
+impl <T: fmt::Debug> fmt::Debug for $id<T> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Debug::fmt(&self.0, f)
+    }
+}
+
+#[cfg(feature="rand")]
+impl <T: Rand> Rand for $id<T> {
+    fn rand<R: Rng>(rng: &mut R) -> Self {
+        $id(Rand::rand(rng))
+    }
+}
+
+#[cfg(feature="rustc-serialize")]
+impl <T: Encodable> Encodable for $id<T> {
+    fn encode<E: Encoder>(&self, e: &mut E) -> Result<(), E::Error> {
+        Encodable::encode(&self.0, e)
+    }
+}
+
+#[cfg(feature="rustc-serialize")]
+impl <T: Decodable> Decodable for $id<T> {
+    fn decode<D: Decoder>(d: &mut D) -> Result<Self, D::Error> {
+        Ok($id(Decodable::decode(d)?))
+    }
+}
+
+#[cfg(feature="serde_all")]
+impl <T: Serialize> Serialize for $id<T> {
+    fn serialize<S: Serializer>(&self, serializer: &mut S) -> Result<(), S::Error> {
+        Serialize::serialize(&self.0, serializer)
+    }
+}
+
+#[cfg(feature="serde_all")]
+impl <T: Deserialize> Deserialize for $id<T> {
+    fn deserialize<D: Deserializer>(deserializer: &mut D) -> Result<Self, D::Error> {
+        Ok($id(Deserialize::deserialize(deserializer)?))
+    }
+}
 
 impl<T> RefCast<[T; $size]> for $id<T> {
     #[inline(always)]

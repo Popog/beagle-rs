@@ -9,5 +9,18 @@ readme = "README.md"
 keywords = ["gamedev", "math", "matrix", "vector"]
 license = "MIT/Apache-2.0"
 
+[features]
+serde_all = ["serde", "serde_derive"]
+quick_bench = [] # remove most of the functions from the benchmark to speed up compiles
+
+[dependencies]
+rand = { version = "^0.3", optional = true }
+rustc-serialize = { version = "^0.3", optional = true }
+serde = { version = "^0.8", optional = true }
+serde_derive = { version = "^0.8", optional = true }
+
 [profile.test]
 opt-level = 3
+
+[profile.bench]
+codegen-units = 4
